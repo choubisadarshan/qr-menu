@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useStaff, signOut } from '@/lib/useStaff';
 import { CONFIG } from '@/lib/config';
 import InstallButton from '@/components/InstallButton';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const NEXT = {
   received: ['preparing', 'Start preparing'],
@@ -100,6 +101,7 @@ export default function KitchenPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <InstallButton />
+          <ThemeToggle />
           <button
             onClick={() => {
               audio.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -120,7 +122,7 @@ export default function KitchenPage() {
         <p className="py-20 text-center text-muted">No active orders. New orders appear here instantly.</p>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {orders.map((o) => {
           const next = NEXT[o.status];
           const mins = Math.max(0, Math.round((now - new Date(o.created_at).getTime()) / 60000));

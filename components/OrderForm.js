@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
+import Dropdown from '@/components/Dropdown';
 
 export default function OrderForm({ order, phone = '', menu, onClose, onSaved }) {
   const [table, setTable] = useState(order?.table_number || '');
@@ -11,7 +12,6 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   const [lines, setLines] = useState(
     (order?.order_items || []).map((i) => ({ name: i.item_name, price: Number(i.price), quantity: i.quantity }))
   );
-  const [pick, setPick] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -19,15 +19,14 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   const tax = Math.round(subtotal * CONFIG.taxRate * 100) / 100;
   const total = subtotal + tax;
 
-  function addItem() {
-    const m = menu.find((x) => String(x.id) === pick);
+  function addItem(id) {
+    const m = menu.find((x) => String(x.id) === id);
     if (!m) return;
     setLines((ls) => {
       const i = ls.findIndex((l) => l.name === m.name);
       if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, quantity: l.quantity + 1 } : l));
       return [...ls, { name: m.name, price: Number(m.price), quantity: 1 }];
     });
-    setPick('');
   }
 
   const qty = (i, d) =>
@@ -111,14 +110,15 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
           </div>
         ))}
 
-        <div className="mt-2 flex gap-2">
-          <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Dish to add" className={input}>
-            <option value="">Add a dish…</option>
-            {menu.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} · {money(m.price)}</option>
-            ))}
-          </select>
-          <button onClick={addItem} className="rounded-xl bg-accent px-4 font-semibold text-white">Add</button>
+        <div className="mt-2">
+          <Dropdown
+            variant="field"
+            value=""
+            onChange={addItem}
+            options={menu.map((m) => ({ value: String(m.id), label: `${m.name} · ${money(m.price)}` }))}
+            placeholder="+ Add a dish"
+            ariaLabel="Add a dish"
+          />
         </div>
 
         <div className="mt-4 flex justify-between border-t border-line pt-3 text-lg font-semibold">

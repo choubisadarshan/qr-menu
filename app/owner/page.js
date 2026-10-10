@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useStaff, signOut } from '@/lib/useStaff';
 import { CONFIG } from '@/lib/config';
 import InstallButton from '@/components/InstallButton';
+import ThemeToggle from '@/components/ThemeToggle';
 import OwnerOrders from '@/components/OwnerOrders';
 import OwnerMenu from '@/components/OwnerMenu';
 
@@ -23,6 +24,7 @@ export default function OwnerPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <InstallButton />
+          <ThemeToggle />
           <a href="/qr" className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">QR codes</a>
           <button onClick={() => signOut(router, '/owner/login')} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
             Sign out

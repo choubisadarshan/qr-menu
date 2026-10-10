@@ -3,15 +3,100 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { money } from '@/lib/config';
 import OrderForm from '@/components/OrderForm';
+import Dropdown from '@/components/Dropdown';
+import LiveSince from '@/components/LiveSince';
+import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
-const STATUSES = ['received', 'preparing', 'ready', 'completed'];
-const RANGES = { today: 'Today', week: 'Last 7 days', all: 'All time' };
+const STATUS_OPTIONS = [
+  { value: 'received', label: 'Received', dot: 'bg-amber-500' },
+  { value: 'preparing', label: 'Preparing', dot: 'bg-sky-500' },
+  { value: 'ready', label: 'Ready', dot: 'bg-ok' },
+  { value: 'completed', label: 'Completed', dot: 'bg-muted' },
+];
+const RANGE_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'Last 7 days' },
+  { value: 'all', label: 'All time' },
+];
 const btn = 'rounded-full px-4 py-1.5 text-sm font-semibold';
 
 const phoneOf = (o) => {
   const c = o.order_contacts;
   return (Array.isArray(c) ? c[0]?.phone : c?.phone) || '';
 };
+
+// One time line: "5:27 pm · 1h 12m 8s ago". Orders older than 12 hours show the full date instead.
+function When({ iso, recent }) {
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-2">
+      <span className="font-medium">{recent ? clock(iso) : dateTime(iso)}</span>
+      {recent && (
+        <span className="tabular-nums text-muted">
+          <LiveSince since={iso} /> ago
+        </span>
+      )}
+    </span>
+  );
+}
+
+function OrderDetails({ o }) {
+  const phone = phoneOf(o);
+  const created = new Date(o.created_at).getTime();
+  const recent = Date.now() - created < TWELVE_HOURS;
+  const after = (iso) => formatDuration(new Date(iso).getTime() - created);
+
+  return (
+    <dl className="mt-3 grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+      <dt className="text-muted">Name</dt>
+      <dd className="break-words font-medium">{o.customer_name}</dd>
+
+      <dt className="text-muted">Phone</dt>
+      <dd>
+        {phone ? (
+          <a href={`tel:${phone}`} className="font-medium tabular-nums text-accent">{phone}</a>
+        ) : (
+          <span className="text-muted">Not given</span>
+        )}
+      </dd>
+
+      <dt className="text-muted">Placed</dt>
+      <dd><When iso={o.created_at} recent={recent} /></dd>
+
+      {o.preparing_at && (
+        <>
+          <dt className="text-muted">Preparing</dt>
+          <dd>
+            <When iso={o.preparing_at} recent={recent} />
+            <div className="text-xs text-muted">after {after(o.preparing_at)}</div>
+          </dd>
+        </>
+      )}
+      {o.ready_at && (
+        <>
+          <dt className="text-muted">Ready</dt>
+          <dd>
+            <When iso={o.ready_at} recent={recent} />
+            <div className="text-xs text-muted">after {after(o.ready_at)}</div>
+          </dd>
+        </>
+      )}
+      {o.completed_at ? (
+        <>
+          <dt className="text-muted">Done</dt>
+          <dd>
+            <When iso={o.completed_at} recent={recent} />
+            <div className="text-xs text-muted">Total time {after(o.completed_at)}</div>
+          </dd>
+        </>
+      ) : o.status === 'completed' ? (
+        <>
+          <dt className="text-muted">Done</dt>
+          <dd className="text-muted">Time not recorded</dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
 
 export default function OwnerOrders() {
   const [orders, setOrders] = useState([]);
@@ -98,16 +183,7 @@ export default function OwnerOrders() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <select
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-          aria-label="Date range"
-          className="rounded-full bg-chip px-4 py-2 text-sm font-semibold"
-        >
-          {Object.entries(RANGES).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
+        <Dropdown variant="pill" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
         {['all', 'active', 'completed'].map((f) => (
           <button
             key={f}
@@ -129,33 +205,20 @@ export default function OwnerOrders() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => (
           <article key={o.id} className="min-w-0 rounded-2xl border border-line bg-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <div className="text-xl font-bold">
-                  Table {o.table_number} <span className="text-sm font-normal text-muted">#{o.id}</span>
-                </div>
-                <div className="text-sm text-muted">
-                  {o.customer_name}
-                  {phoneOf(o) && ` · ${phoneOf(o)}`} ·{' '}
-                  {new Date(o.created_at).toLocaleString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 text-xl font-bold">
+                Table {o.table_number} <span className="text-sm font-normal text-muted">#{o.id}</span>
               </div>
-              <select
+              <Dropdown
+                variant="pill"
+                align="right"
                 value={o.status}
-                onChange={(e) => patch(o.id, { status: e.target.value })}
-                aria-label={`Status of order ${o.id}`}
-                className="rounded-full bg-chip px-3 py-1.5 text-sm font-semibold capitalize"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                onChange={(v) => patch(o.id, { status: v })}
+                options={STATUS_OPTIONS}
+                ariaLabel={`Status of order ${o.id}`}
+              />
             </div>
+            <OrderDetails o={o} />
 
             <ul className="my-3 divide-y divide-line">
               {o.order_items.map((i) => (

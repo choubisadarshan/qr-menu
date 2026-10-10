@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CONFIG } from '@/lib/config';
 import InstallButton from '@/components/InstallButton';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const ALLOWED = { kitchen: ['kitchen', 'owner'], owner: ['owner'] };
 const TITLE = { kitchen: 'Kitchen', owner: 'Owner' };
@@ -43,6 +44,9 @@ export default function LoginForm({ app }) {
   const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-4">
+      <div className="mb-6 flex justify-end">
+        <ThemeToggle />
+      </div>
       <h1 className="text-2xl font-semibold">{CONFIG.name}</h1>
       <p className="mb-6 text-muted">{TITLE[app]} login</p>
       <form onSubmit={submit} className="space-y-3">

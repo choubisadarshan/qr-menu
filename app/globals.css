@@ -11,20 +11,38 @@
   --ok: #0f7a2a;
   --okbg: #c9f5cf;
   --bar: #2a2623;
+  color-scheme: light;
 }
 
+/* Dark mode chosen with the toggle button (saved in the browser) */
+:root[data-theme="dark"] {
+  --bg: #161412;
+  --card: #221f1c;
+  --ink: #f3eee9;
+  --muted: #a39a92;
+  --accent: #dc5a26;
+  --chip: #2d2925;
+  --line: #3a3430;
+  --ok: #5fd67a;
+  --okbg: #17381f;
+  --bar: #0d0c0b;
+  color-scheme: dark;
+}
+
+/* Fallback: follow the phone/computer setting if the theme script has not run */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #161412;
     --card: #221f1c;
     --ink: #f3eee9;
     --muted: #a39a92;
-    --accent: #d4561f;
+    --accent: #dc5a26;
     --chip: #2d2925;
-    --line: #332e2a;
+    --line: #3a3430;
     --ok: #5fd67a;
     --okbg: #17381f;
     --bar: #0d0c0b;
+    color-scheme: dark;
   }
 }
 

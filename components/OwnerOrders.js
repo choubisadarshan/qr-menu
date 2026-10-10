@@ -126,9 +126,9 @@ export default function OwnerOrders() {
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
       {shown.length === 0 && <p className="py-16 text-center text-muted">No orders here yet.</p>}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => (
-          <article key={o.id} className="rounded-2xl border border-line bg-card p-4">
+          <article key={o.id} className="min-w-0 rounded-2xl border border-line bg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <div className="text-xl font-bold">

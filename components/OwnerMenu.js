@@ -216,33 +216,33 @@ export default function OwnerMenu() {
       {Object.keys(groups).map((cat) => (
         <div key={cat} className="mb-5">
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">{cat}</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {groups[cat].map((m) => (
               <article
                 key={m.id}
-                className={`flex items-center gap-3 rounded-2xl border border-line bg-card p-3 ${m.available === false ? 'opacity-60' : ''}`}
+                className={`min-w-0 rounded-2xl border border-line bg-card p-3 ${m.available === false ? 'opacity-60' : ''}`}
               >
-                <div aria-hidden className="grid h-14 w-14 flex-none place-items-center rounded-xl bg-chip text-3xl">
-                  {m.emoji || '🍽️'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">
-                    <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${m.is_veg === false ? 'bg-red-700' : 'bg-ok'}`} />
-                    {m.name}
+                <div className="flex items-center gap-3">
+                  <div aria-hidden className="grid h-14 w-14 flex-none place-items-center rounded-xl bg-chip text-3xl">
+                    {m.emoji || '🍽️'}
                   </div>
-                  <div className="text-sm text-muted">{money(m.price ?? 0)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">
+                      <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${m.is_veg === false ? 'bg-red-700' : 'bg-ok'}`} />
+                      {m.name}
+                    </div>
+                    <div className="text-sm text-muted">{money(m.price ?? 0)}</div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => toggle(m)}
-                    className={`${btn} ${m.available === false ? 'bg-chip text-muted' : 'bg-okbg text-ok'}`}
+                    className={`${btn} flex-1 ${m.available === false ? 'bg-chip text-muted' : 'bg-okbg text-ok'}`}
                   >
                     {m.available === false ? 'Out of stock' : 'In stock'}
                   </button>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => setForm(toForm(m))} className={`${btn} flex-1 bg-chip`}>Edit</button>
-                    <button onClick={() => remove(m)} className={`${btn} bg-chip text-red-600`}>Delete</button>
-                  </div>
+                  <button onClick={() => setForm(toForm(m))} className={`${btn} bg-chip`}>Edit</button>
+                  <button onClick={() => remove(m)} className={`${btn} bg-chip text-red-600`}>Delete</button>
                 </div>
               </article>
             ))}

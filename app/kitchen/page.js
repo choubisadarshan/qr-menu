@@ -14,7 +14,7 @@ const NEXT = {
 
 export default function KitchenPage() {
   const router = useRouter();
-  const { loading } = useStaff(['kitchen', 'owner']);
+  const { loading } = useStaff(['kitchen', 'owner'], '/kitchen/login');
   const [orders, setOrders] = useState([]);
   const [soundOn, setSoundOn] = useState(false);
   const [now, setNow] = useState(0);
@@ -110,7 +110,7 @@ export default function KitchenPage() {
           >
             {soundOn ? 'Sound alerts on' : 'Enable sound alerts'}
           </button>
-          <button onClick={() => signOut(router)} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
+          <button onClick={() => signOut(router, '/kitchen/login')} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
             Sign out
           </button>
         </div>

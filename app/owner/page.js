@@ -9,7 +9,7 @@ import OwnerMenu from '@/components/OwnerMenu';
 
 export default function OwnerPage() {
   const router = useRouter();
-  const { loading, email } = useStaff(['owner']);
+  const { loading, email } = useStaff(['owner'], '/owner/login');
   const [tab, setTab] = useState('Orders');
 
   if (loading) return <p className="p-10 text-center text-muted">Loading…</p>;
@@ -24,7 +24,7 @@ export default function OwnerPage() {
         <div className="flex flex-wrap items-center gap-2">
           <InstallButton />
           <a href="/qr" className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">QR codes</a>
-          <button onClick={() => signOut(router)} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
+          <button onClick={() => signOut(router, '/owner/login')} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
             Sign out
           </button>
         </div>

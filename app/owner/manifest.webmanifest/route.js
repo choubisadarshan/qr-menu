@@ -1,11 +1,12 @@
 import { manifestResponse } from '@/lib/manifest';
+import { CONFIG } from '@/lib/config';
 
 export function GET() {
   return manifestResponse({
-    name: 'Owner Panel',
+    name: `${CONFIG.name} Owner`,
     short: 'Owner',
     start: '/owner',
     app: 'owner',
-    color: '#1d1b19',
+    color: '#17434b',
   });
 }

@@ -1,31 +1,19 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useTheme } from '@/lib/useTheme';
 
-export default function ThemeToggle() {
-  const [theme, setTheme] = useState(null);
-
-  useEffect(() => {
-    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
-  }, []);
-
-  function toggle() {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try {
-      localStorage.setItem('theme', next);
-    } catch {}
-    setTheme(next);
-  }
+export default function ThemeToggle({ tone = 'default' }) {
+  const { theme, choose } = useTheme();
 
   if (!theme) return <span className="inline-block h-10 w-10" aria-hidden="true" />;
 
   const dark = theme === 'dark';
+  const look = tone === 'hero' ? 'bg-white/15 text-hero-ink' : 'bg-chip';
   return (
     <button
-      onClick={toggle}
+      onClick={() => choose(dark ? 'light' : 'dark')}
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={dark ? 'Light mode' : 'Dark mode'}
-      className="grid h-10 w-10 flex-none place-items-center rounded-full bg-chip"
+      className={`grid h-10 w-10 flex-none place-items-center rounded-md ${look}`}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {dark ? (

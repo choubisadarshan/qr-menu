@@ -101,10 +101,10 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
         {lines.map((l, i) => (
           <div key={l.name} className="flex items-center justify-between gap-2 border-t border-line py-2 first:border-0">
             <span className="min-w-0 flex-1 truncate">{l.name}</span>
-            <div className="flex items-center rounded-full bg-chip p-1">
-              <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-full bg-card text-lg font-semibold">−</button>
+            <div className="flex items-center rounded-md bg-chip p-1">
+              <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md bg-card text-lg font-semibold">−</button>
               <span className="min-w-8 text-center font-semibold">{l.quantity}</span>
-              <button onClick={() => qty(i, 1)} aria-label={`Add one ${l.name}`} className="h-8 w-8 rounded-full bg-accent text-lg font-semibold text-white">+</button>
+              <button onClick={() => qty(i, 1)} aria-label={`Add one ${l.name}`} className="h-8 w-8 rounded-md bg-accent text-lg font-semibold text-on-accent">+</button>
             </div>
             <span className="w-20 text-right">{money(l.price * l.quantity)}</span>
           </div>
@@ -129,7 +129,7 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-chip p-3 font-semibold">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-accent p-3 font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-accent p-3 font-semibold text-on-accent disabled:opacity-60">
             {busy ? 'Saving…' : 'Save order'}
           </button>
         </div>

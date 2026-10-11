@@ -1,24 +1,38 @@
-import { Outfit } from 'next/font/google';
-import Script from 'next/script';
+import { DM_Sans, Fraunces } from 'next/font/google';
+import ThemeSync from '@/components/ThemeSync';
+import { CONFIG } from '@/lib/config';
 import './globals.css';
 
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
+const body = DM_Sans({ subsets: ['latin'], variable: '--font-dm' });
+const display = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' });
 
-export const metadata = { title: 'Scan & Order' };
-export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+export const metadata = {
+  title: { default: `${CONFIG.name} · Scan & Order`, template: `%s · ${CONFIG.name}` },
+  description: `Scan the QR code, order from your table and pay at the counter at ${CONFIG.name}.`,
+};
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#f6f1e8',
+  colorScheme: 'light dark',
+};
 
-// Applies the saved light/dark choice before the page paints (no flash).
-const themeInit = `try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+// Runs before the page paints: applies the saved light/dark choice (or the phone's setting).
+const themeInit = `try{var t=localStorage.getItem('theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}var r=document.documentElement;r.setAttribute('data-theme',t);r.style.colorScheme=t}catch(e){}`;
 
 // Captures the browser's install prompt early, before React loads.
 const capture = `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaPrompt=e;window.dispatchEvent(new Event('pwa-ready'));});`;
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={outfit.variable} suppressHydrationWarning>
+    <html lang="en" className={`${body.variable} ${display.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script dangerouslySetInnerHTML={{ __html: capture }} />
+      </head>
       <body className="font-sans antialiased">
-        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInit }} />
-        <Script id="pwa-capture" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: capture }} />
+        <ThemeSync />
         {children}
       </body>
     </html>

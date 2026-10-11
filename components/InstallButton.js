@@ -56,7 +56,7 @@ export default function InstallButton() {
           window.__pwaPrompt = null;
           setEvt(null);
         }}
-        className="rounded-full bg-chip px-4 py-2 text-sm font-semibold"
+        className="rounded-md bg-chip px-4 py-2 text-sm font-semibold"
       >
         Install app
       </button>

@@ -7,6 +7,12 @@ import { CONFIG } from '@/lib/config';
 import InstallButton from '@/components/InstallButton';
 import ThemeToggle from '@/components/ThemeToggle';
 
+const STRIP = {
+  received: 'border-l-amber-500',
+  preparing: 'border-l-sky-500',
+  ready: 'border-l-ok',
+};
+
 const NEXT = {
   received: ['preparing', 'Start preparing'],
   preparing: ['ready', 'Mark ready'],
@@ -108,11 +114,11 @@ export default function KitchenPage() {
               setSoundOn(true);
             }}
             disabled={soundOn}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-chip disabled:text-muted"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:bg-chip disabled:text-muted"
           >
             {soundOn ? 'Sound alerts on' : 'Enable sound alerts'}
           </button>
-          <button onClick={() => signOut(router, '/kitchen/login')} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
+          <button onClick={() => signOut(router, '/kitchen/login')} className="rounded-md bg-chip px-4 py-2 text-sm font-semibold">
             Sign out
           </button>
         </div>
@@ -127,7 +133,7 @@ export default function KitchenPage() {
           const next = NEXT[o.status];
           const mins = Math.max(0, Math.round((now - new Date(o.created_at).getTime()) / 60000));
           return (
-            <article key={o.id} className="rounded-2xl border border-line bg-card p-4">
+            <article key={o.id} className={`rounded-lg border border-l-4 border-line bg-card p-4 ${STRIP[o.status] || ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-3xl font-bold">Table {o.table_number}</div>
@@ -136,7 +142,7 @@ export default function KitchenPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="rounded-full bg-chip px-3 py-1 text-xs font-semibold capitalize">{o.status}</span>
+                  <span className="rounded-md bg-chip px-3 py-1 text-xs font-semibold capitalize">{o.status}</span>
                   <div className={`mt-1 text-sm font-semibold ${mins >= 15 ? 'text-accent' : 'text-muted'}`}>
                     {mins} min
                   </div>
@@ -162,7 +168,7 @@ export default function KitchenPage() {
               {next && (
                 <button
                   onClick={() => setStatus(o.id, next[0])}
-                  className="w-full rounded-xl bg-accent p-3.5 text-lg font-semibold text-white"
+                  className="w-full rounded-xl bg-accent p-3.5 text-lg font-semibold text-on-accent"
                 >
                   {next[1]}
                 </button>

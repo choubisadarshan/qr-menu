@@ -13,8 +13,8 @@ export function GET(req) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: owner ? '#1d1b19' : '#a63a0a',
-          color: '#ffffff',
+          background: owner ? '#17434b' : '#b24a1d',
+          color: '#f6efe2',
           fontSize: size * 0.5,
           fontWeight: 700,
         }}

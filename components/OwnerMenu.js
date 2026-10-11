@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { money } from '@/lib/config';
+import { uploadDishImage } from '@/lib/uploadImage';
 
-const btn = 'rounded-full px-4 py-1.5 text-sm font-semibold';
+const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
 const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
 
 const EMPTY = {
@@ -16,6 +17,7 @@ const EMPTY = {
   tag: '',
   emoji: '🍽️',
   available: true,
+  image_url: '',
 };
 
 function toForm(m) {
@@ -29,6 +31,7 @@ function toForm(m) {
     tag: m.tag ?? '',
     emoji: m.emoji ?? '🍽️',
     available: m.available !== false,
+    image_url: m.image_url ?? '',
   };
 }
 
@@ -36,9 +39,25 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
   const [f, setF] = useState(initial);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const flag = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.checked }));
+
+  async function onPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const url = await uploadDishImage(file);
+      setF((p) => ({ ...p, image_url: url }));
+    } catch {
+      setError('Photo upload failed. Check the storage setup and that you are signed in as the owner.');
+    }
+    setUploading(false);
+  }
 
   async function save() {
     const price = Number(f.price);
@@ -56,6 +75,7 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
       tag: f.tag.trim() || null,
       emoji: f.emoji.trim() || '🍽️',
       available: f.available,
+      image_url: f.image_url || null,
     };
     const q = f.id
       ? supabase.from('menu_items').update(row).eq('id', f.id)
@@ -73,6 +93,27 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-bg p-4 sm:rounded-3xl">
         <h2 className="mb-3 text-xl font-semibold">{f.id ? 'Edit dish' : 'Add dish'}</h2>
         <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-lg border border-line bg-chip text-4xl">
+              {f.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.image_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span aria-hidden="true">{f.emoji || '🍽️'}</span>
+              )}
+            </div>
+            <div className="flex flex-col items-start gap-2">
+              <label className="cursor-pointer rounded-md bg-chip px-4 py-2 text-sm font-semibold focus-within:ring-2 focus-within:ring-accent">
+                {uploading ? 'Uploading…' : f.image_url ? 'Change photo' : 'Add photo'}
+                <input type="file" accept="image/*" onChange={onPhoto} disabled={uploading} className="sr-only" />
+              </label>
+              {f.image_url && (
+                <button type="button" onClick={() => setF((p) => ({ ...p, image_url: '' }))} className="text-sm font-semibold text-red-600">
+                  Remove photo
+                </button>
+              )}
+            </div>
+          </div>
           <div>
             <label htmlFor="m-name" className="mb-1 block text-sm font-medium">Name</label>
             <input id="m-name" className={input} value={f.name} onChange={set('name')} maxLength={60} />
@@ -107,7 +148,7 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
                   type="button"
                   key={c}
                   onClick={() => setF((p) => ({ ...p, category: c }))}
-                  className="rounded-full bg-chip px-3 py-1 text-xs font-semibold"
+                  className="rounded-md bg-chip px-3 py-1 text-xs font-semibold"
                 >
                   {c}
                 </button>
@@ -128,7 +169,7 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-4 flex gap-2">
           <button onClick={onCancel} className="flex-1 rounded-xl bg-chip p-3 font-semibold">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-accent p-3 font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy || uploading} className="flex-1 rounded-xl bg-accent p-3 font-semibold text-on-accent disabled:opacity-60">
             {busy ? 'Saving…' : 'Save dish'}
           </button>
         </div>
@@ -202,7 +243,7 @@ export default function OwnerMenu() {
           className={`${input} max-w-xs`}
         />
         <span className="text-sm text-muted">{items.length} dishes</span>
-        <button onClick={() => { setForm(EMPTY); }} className={`${btn} ml-auto bg-ok text-white`}>
+        <button onClick={() => { setForm(EMPTY); }} className={`${btn} ml-auto bg-ok text-on-ok`}>
           + Add dish
         </button>
       </div>
@@ -223,9 +264,14 @@ export default function OwnerMenu() {
                 className={`min-w-0 rounded-2xl border border-line bg-card p-3 ${m.available === false ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center gap-3">
-                  <div aria-hidden className="grid h-14 w-14 flex-none place-items-center rounded-xl bg-chip text-3xl">
-                    {m.emoji || '🍽️'}
-                  </div>
+                  <div aria-hidden="true" className="grid h-14 w-14 flex-none place-items-center overflow-hidden rounded-lg bg-chip text-3xl">
+                  {m.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    m.emoji || '🍽️'
+                  )}
+                </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-semibold">
                       <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${m.is_veg === false ? 'bg-red-700' : 'bg-ok'}`} />

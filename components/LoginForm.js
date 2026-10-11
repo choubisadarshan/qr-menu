@@ -61,7 +61,7 @@ export default function LoginForm({ app }) {
             value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <button disabled={busy} className="w-full rounded-2xl bg-accent p-3.5 text-lg font-semibold text-white disabled:opacity-60">
+        <button disabled={busy} className="w-full rounded-2xl bg-accent p-3.5 text-lg font-semibold text-on-accent disabled:opacity-60">
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>

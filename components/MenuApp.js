@@ -39,22 +39,58 @@ function Stepper({ q, name, onChange }) {
       <button
         onClick={() => onChange(1)}
         aria-label={`Add ${name}`}
-        className="rounded-full bg-accent px-5 py-2 font-semibold text-white"
+        className="rounded-md bg-accent px-5 py-2 font-semibold text-on-accent"
       >
         + Add
       </button>
     );
   }
   return (
-    <div className="flex items-center rounded-full bg-chip p-1">
-      <button onClick={() => onChange(-1)} aria-label={`Remove one ${name}`} className="h-9 w-9 rounded-full bg-card text-xl font-semibold">
+    <div className="flex items-center rounded-md bg-chip p-1">
+      <button onClick={() => onChange(-1)} aria-label={`Remove one ${name}`} className="h-9 w-9 rounded-md bg-card text-xl font-semibold">
         −
       </button>
       <span className="min-w-8 text-center font-semibold">{q}</span>
-      <button onClick={() => onChange(1)} aria-label={`Add one ${name}`} className="h-9 w-9 rounded-full bg-accent text-xl font-semibold text-white">
+      <button onClick={() => onChange(1)} aria-label={`Add one ${name}`} className="h-9 w-9 rounded-md bg-accent text-xl font-semibold text-on-accent">
         +
       </button>
     </div>
+  );
+}
+
+// One dish in the menu: name, description, price, photo (or emoji) and the add button.
+function Dish({ m, q, onChange }) {
+  return (
+    <article className="flex gap-4 border-b border-line py-4 last:border-0">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-lg font-semibold leading-snug">
+          <span
+            role="img"
+            aria-label={m.is_veg ? 'Vegetarian' : 'Non-vegetarian'}
+            className={`inline-grid h-4 w-4 flex-none place-items-center border-2 ${m.is_veg ? 'border-ok' : 'border-red-700'}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${m.is_veg ? 'bg-ok' : 'bg-red-700'}`} />
+          </span>
+          {m.name}
+          {m.tag && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-accent">{m.tag}</span>
+          )}
+        </h3>
+        <p className="mb-2 mt-1 line-clamp-2 text-sm text-muted">{m.description}</p>
+        <div className="mt-auto flex items-center justify-between gap-3">
+          <span className="text-lg font-semibold tabular-nums">{money(m.price)}</span>
+          <Stepper q={q} name={m.name} onChange={onChange} />
+        </div>
+      </div>
+      <div className="relative h-24 w-24 flex-none overflow-hidden rounded-lg border border-line bg-chip">
+        {m.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={m.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <div aria-hidden="true" className="grid h-full w-full place-items-center text-4xl">{m.emoji}</div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -69,7 +105,7 @@ function OrderCard({ o }) {
           <h3 className="text-lg font-semibold">Order #{o.id}</h3>
           <p className="text-sm text-muted">Placed at {clock(o.created_at)}</p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-chip'}`}>
+        <span className={`rounded-md px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-chip'}`}>
           {LABEL[o.status] || o.status}
         </span>
       </div>
@@ -105,7 +141,7 @@ function OrderCard({ o }) {
       <div className="flex items-center justify-between border-t border-line pt-3">
         <span className="text-lg font-semibold">{money(o.total)}</span>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+          className={`rounded-md px-3 py-1 text-xs font-semibold ${
             o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-chip text-accent'
           }`}
         >
@@ -131,6 +167,7 @@ export default function MenuApp() {
   const [busy, setBusy] = useState(false);
   const [myOrders, setMyOrders] = useState([]);
   const [justPlaced, setJustPlaced] = useState(null);
+  const [vegOnly, setVegOnly] = useState(false);
 
   // Load menu
   useEffect(() => {
@@ -271,7 +308,7 @@ export default function MenuApp() {
   /* ---------- MY ORDERS ---------- */
   if (view === 'orders') {
     return (
-      <main className="mx-auto max-w-md px-4 pb-32">
+      <main className="mx-auto max-w-md overflow-x-hidden px-4 pb-32">
         <header className="flex items-center justify-between gap-3 py-4">
           <div>
             <h1 className="text-2xl font-semibold">Your orders</h1>
@@ -306,7 +343,7 @@ export default function MenuApp() {
             </section>
 
             <h2 className={sectionTitle}>
-              In progress <span className="rounded-full bg-chip px-2 py-0.5 text-xs">{active.length}</span>
+              In progress <span className="rounded-md bg-chip px-2 py-0.5 text-xs">{active.length}</span>
             </h2>
             {active.length === 0 ? (
               <p className="mb-3 rounded-2xl bg-chip p-4 text-sm text-muted">No orders in progress.</p>
@@ -315,7 +352,7 @@ export default function MenuApp() {
             )}
 
             <h2 className={sectionTitle}>
-              Completed <span className="rounded-full bg-chip px-2 py-0.5 text-xs">{completed.length}</span>
+              Completed <span className="rounded-md bg-chip px-2 py-0.5 text-xs">{completed.length}</span>
             </h2>
             {completed.length === 0 ? (
               <p className="mb-3 rounded-2xl bg-chip p-4 text-sm text-muted">No completed orders yet.</p>
@@ -332,7 +369,7 @@ export default function MenuApp() {
               setView('menu');
               window.scrollTo(0, 0);
             }}
-            className="w-full rounded-2xl bg-accent p-4 text-lg font-semibold text-white"
+            className="w-full rounded-2xl bg-accent p-4 text-lg font-semibold text-on-accent"
           >
             + Order more items
           </button>
@@ -344,7 +381,7 @@ export default function MenuApp() {
   /* ---------- CHECKOUT ---------- */
   if (view === 'checkout') {
     return (
-      <main className="mx-auto max-w-md px-4 pb-10">
+      <main className="mx-auto max-w-md overflow-x-hidden px-4 pb-10">
         <div className="flex items-center justify-between gap-3">
           <button onClick={() => setView('menu')} className="py-4 font-semibold text-accent">
             ← Edit cart
@@ -353,7 +390,7 @@ export default function MenuApp() {
         </div>
         <h1 className="mb-4 flex flex-wrap items-center gap-2 text-2xl font-semibold">
           Confirm your order
-          <span className="rounded-full bg-okbg px-2 py-0.5 text-xs font-semibold text-ok">Table {table}</span>
+          <span className="rounded-md bg-okbg px-2 py-0.5 text-xs font-semibold text-ok">Table {table}</span>
         </h1>
 
         <section className={panel}>
@@ -403,7 +440,7 @@ export default function MenuApp() {
         </section>
 
         <button onClick={placeOrder} disabled={busy}
-          className="w-full rounded-2xl bg-accent p-4 text-lg font-semibold text-white disabled:opacity-60">
+          className="w-full rounded-2xl bg-accent p-4 text-lg font-semibold text-on-accent disabled:opacity-60">
           {busy ? 'Sending…' : `Send order to kitchen (${money(total)})`}
         </button>
       </main>
@@ -411,91 +448,120 @@ export default function MenuApp() {
   }
 
   /* ---------- MENU ---------- */
-  const list = menu.filter((m) => cat === 'All' || m.category === cat);
+  const shown = menu.filter((m) => (cat === 'All' || m.category === cat) && (!vegOnly || m.is_veg));
+  const groups = {};
+  shown.forEach((m) => {
+    if (!groups[m.category]) groups[m.category] = [];
+    groups[m.category].push(m);
+  });
+
   return (
-    <main className="mx-auto max-w-md px-4 pb-32">
-      <header className="flex items-start justify-between gap-3 py-4">
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
-            {CONFIG.name}
-            <span className="rounded-full bg-okbg px-2 py-0.5 text-xs font-semibold text-ok">Table {table}</span>
-          </h1>
-          <p className="text-sm text-muted">Menu</p>
+    <main className="mx-auto max-w-md overflow-x-hidden pb-32">
+      <header className="bg-hero px-4 pb-7 pt-5 text-hero-ink">
+        <div className="flex items-start justify-between gap-3">
+          <p className="pt-2 text-xs font-semibold uppercase tracking-[0.25em] text-hero-ink/70">Table {table}</p>
+          <div className="flex flex-none items-center gap-2">
+            {myOrders.length > 0 && (
+              <button
+                onClick={() => {
+                  setJustPlaced(null);
+                  setView('orders');
+                }}
+                className="rounded-md bg-white/15 px-3.5 py-2.5 text-sm font-semibold"
+              >
+                My orders
+                {active.length > 0 && (
+                  <span className="ml-2 rounded-sm bg-accent px-1.5 py-0.5 text-xs text-on-accent">{active.length}</span>
+                )}
+              </button>
+            )}
+            <ThemeToggle tone="hero" />
+          </div>
         </div>
-        <div className="flex flex-none items-center gap-2">
-          {myOrders.length > 0 && (
-            <button
-              onClick={() => {
-                setJustPlaced(null);
-                setView('orders');
-              }}
-              className="rounded-full bg-chip px-4 py-2.5 text-sm font-semibold"
-            >
-              My orders
-              {active.length > 0 && (
-                <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs text-white">{active.length}</span>
-              )}
-            </button>
-          )}
-          <ThemeToggle />
+        <h1 className="mt-3 font-display text-4xl font-semibold leading-tight">{CONFIG.name}</h1>
+        <div className="mt-3 flex items-center gap-2 text-hero-ink/60" aria-hidden="true">
+          <span className="h-px w-10 bg-current" />
+          <span className="text-xs">◆</span>
+          <span className="h-px w-10 bg-current" />
         </div>
+        <p className="mt-3 max-w-xs text-sm text-hero-ink/80">
+          Pick your dishes, order from your seat, and pay at the counter.
+        </p>
       </header>
 
-      <section className="mb-4 rounded-2xl bg-chip p-4">
-        <h2 className="text-xl font-semibold">Scan, tap dishes &amp; enjoy.</h2>
-        <p className="mt-1 text-sm text-muted">
-          Tap + to add items. Your order reaches the kitchen as soon as you place it.
-        </p>
-      </section>
-
-      <div className="flex gap-2 overflow-x-auto pb-3" role="group" aria-label="Categories">
-        {cats.map((c) => (
-          <button key={c} onClick={() => setCat(c)} aria-pressed={c === cat}
-            className={`whitespace-nowrap rounded-full px-4 py-2 font-medium ${c === cat ? 'bg-accent text-white' : 'bg-chip'}`}>
-            {c === 'All' ? 'All items' : c}
+      <div className="px-4 pt-5">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filters">
+          {cats.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCat(c)}
+              aria-pressed={c === cat}
+              className={`rounded-md border px-3.5 py-1.5 text-sm font-medium ${
+                c === cat ? 'border-accent bg-accent text-on-accent' : 'border-line bg-card'
+              }`}
+            >
+              {c === 'All' ? 'All items' : c}
+            </button>
+          ))}
+          <button
+            onClick={() => setVegOnly((v) => !v)}
+            aria-pressed={vegOnly}
+            className={`flex items-center gap-2 rounded-md border px-3.5 py-1.5 text-sm font-medium ${
+              vegOnly ? 'border-ok bg-okbg text-ok' : 'border-line bg-card text-muted'
+            }`}
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-ok" />
+            Veg only
           </button>
-        ))}
+        </div>
       </div>
 
-      {loading && <p className="py-10 text-center text-muted">Loading menu…</p>}
-      {loadError && <p className="py-10 text-center text-red-600">{loadError}</p>}
-
-      {list.map((m) => (
-        <article key={m.id} className="mb-3 flex gap-3 rounded-2xl border border-line bg-card p-3.5">
-          <div className="flex min-w-0 flex-1 flex-col">
-            <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
-              <span title={m.is_veg ? 'Veg' : 'Non-veg'}
-                className={`h-2.5 w-2.5 rounded-full ${m.is_veg ? 'bg-ok' : 'bg-red-700'}`} />
-              {m.name}
-              {m.tag && (
-                <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-semibold text-muted">{m.tag}</span>
-              )}
-            </h3>
-            <p className="mb-2 mt-1 line-clamp-2 text-sm text-muted">{m.description}</p>
-            <div className="mt-auto flex items-center justify-between">
-              <span className="text-xl font-semibold text-accent">{money(m.price)}</span>
-              <Stepper q={cart[m.id]} name={m.name} onChange={(d) => change(m.id, d)} />
+      {loading && (
+        <div className="space-y-5 px-4 pt-6" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-2/3 animate-pulse rounded-md bg-chip" />
+                <div className="h-4 w-full animate-pulse rounded-md bg-chip" />
+                <div className="h-6 w-20 animate-pulse rounded-md bg-chip" />
+              </div>
+              <div className="h-24 w-24 animate-pulse rounded-lg bg-chip" />
             </div>
-          </div>
-          <div aria-hidden="true" className="grid h-24 w-24 flex-none place-items-center rounded-xl bg-chip text-5xl">
-            {m.emoji}
-          </div>
-        </article>
+          ))}
+        </div>
+      )}
+      {loadError && <p className="px-4 py-10 text-center text-red-600">{loadError}</p>}
+      {!loading && !loadError && shown.length === 0 && (
+        <p className="px-4 py-12 text-center text-muted">No dishes match this filter.</p>
+      )}
+
+      {Object.keys(groups).map((c) => (
+        <section key={c} className="px-4 pt-6">
+          <h2 className="flex items-center gap-3 font-display text-xl font-semibold">
+            {c}
+            <span className="h-px flex-1 bg-line" />
+          </h2>
+          {groups[c].map((m) => (
+            <Dish key={m.id} m={m} q={cart[m.id]} onChange={(d) => change(m.id, d)} />
+          ))}
+        </section>
       ))}
 
-      <p className="mt-2 rounded-xl bg-chip p-4 text-sm text-muted">
+      <p className="mx-4 mt-6 border border-line bg-card p-4 text-sm text-muted">
         Dietary request? Add a note for the kitchen when you confirm your order.
       </p>
 
       {count > 0 && (
         <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md p-4">
-          <button onClick={() => setView('checkout')}
-            className="flex w-full items-center justify-between rounded-2xl bg-bar p-3 pl-5 text-left text-white">
+          <button
+            onClick={() => setView('checkout')}
+            className="flex w-full items-center justify-between rounded-lg bg-bar p-3 pl-5 text-left text-white"
+          >
             <span>
               <span className="block text-sm opacity-80">{count} item{count > 1 ? 's' : ''}</span>
               <span className="text-xl font-semibold">{money(subtotal)}</span>
             </span>
-            <span className="rounded-xl bg-accent px-5 py-3 text-lg font-semibold">Order now</span>
+            <span className="rounded-md bg-accent px-5 py-3 text-lg font-semibold text-on-accent">Order now</span>
           </button>
         </div>
       )}

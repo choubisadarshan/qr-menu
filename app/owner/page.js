@@ -25,8 +25,8 @@ export default function OwnerPage() {
         <div className="flex flex-wrap items-center gap-2">
           <InstallButton />
           <ThemeToggle />
-          <a href="/qr" className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">QR codes</a>
-          <button onClick={() => signOut(router, '/owner/login')} className="rounded-full bg-chip px-4 py-2 text-sm font-semibold">
+          <a href="/qr" className="rounded-md bg-chip px-4 py-2 text-sm font-semibold">QR codes</a>
+          <button onClick={() => signOut(router, '/owner/login')} className="rounded-md bg-chip px-4 py-2 text-sm font-semibold">
             Sign out
           </button>
         </div>
@@ -38,7 +38,7 @@ export default function OwnerPage() {
             key={t}
             onClick={() => setTab(t)}
             aria-pressed={tab === t}
-            className={`rounded-full px-5 py-2 font-semibold ${tab === t ? 'bg-accent text-white' : 'bg-chip'}`}
+            className={`rounded-md px-5 py-2 font-semibold ${tab === t ? 'bg-accent text-on-accent' : 'bg-chip'}`}
           >
             {t}
           </button>

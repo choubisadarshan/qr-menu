@@ -13,40 +13,32 @@ const STATUS_OPTIONS = [
   { value: 'ready', label: 'Ready', dot: 'bg-ok' },
   { value: 'completed', label: 'Completed', dot: 'bg-muted' },
 ];
+const STRIP = {
+  received: 'border-l-amber-500',
+  preparing: 'border-l-sky-500',
+  ready: 'border-l-ok',
+  completed: 'border-l-muted',
+};
 const RANGE_OPTIONS = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'Last 7 days' },
   { value: 'all', label: 'All time' },
 ];
-const btn = 'rounded-full px-4 py-1.5 text-sm font-semibold';
+const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
 
 const phoneOf = (o) => {
   const c = o.order_contacts;
   return (Array.isArray(c) ? c[0]?.phone : c?.phone) || '';
 };
 
-// One time line: "5:27 pm · 1h 12m 8s ago". Orders older than 12 hours show the full date instead.
-function When({ iso, recent }) {
-  return (
-    <span className="flex flex-wrap items-baseline gap-x-2">
-      <span className="font-medium">{recent ? clock(iso) : dateTime(iso)}</span>
-      {recent && (
-        <span className="tabular-nums text-muted">
-          <LiveSince since={iso} /> ago
-        </span>
-      )}
-    </span>
-  );
-}
-
 function OrderDetails({ o }) {
   const phone = phoneOf(o);
   const created = new Date(o.created_at).getTime();
   const recent = Date.now() - created < TWELVE_HOURS;
-  const after = (iso) => formatDuration(new Date(iso).getTime() - created);
+  const done = o.status === 'completed';
 
   return (
-    <dl className="mt-3 grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+    <dl className="mt-3 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
       <dt className="text-muted">Name</dt>
       <dd className="break-words font-medium">{o.customer_name}</dd>
 
@@ -60,40 +52,32 @@ function OrderDetails({ o }) {
       </dd>
 
       <dt className="text-muted">Placed</dt>
-      <dd><When iso={o.created_at} recent={recent} /></dd>
+      <dd className="flex flex-wrap items-baseline gap-x-2">
+        <span className="font-medium">{recent ? clock(o.created_at) : dateTime(o.created_at)}</span>
+        {recent && !done && (
+          <span className="tabular-nums text-muted">
+            <LiveSince since={o.created_at} /> ago
+          </span>
+        )}
+      </dd>
 
-      {o.preparing_at && (
+      {done && (
         <>
-          <dt className="text-muted">Preparing</dt>
-          <dd>
-            <When iso={o.preparing_at} recent={recent} />
-            <div className="text-xs text-muted">after {after(o.preparing_at)}</div>
+          <dt className="text-muted">Done</dt>
+          <dd className="flex flex-wrap items-baseline gap-x-2">
+            {o.completed_at ? (
+              <>
+                <span className="font-medium">{recent ? clock(o.completed_at) : dateTime(o.completed_at)}</span>
+                <span className="tabular-nums text-muted">
+                  took {formatDuration(new Date(o.completed_at).getTime() - created)}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">Time not recorded</span>
+            )}
           </dd>
         </>
       )}
-      {o.ready_at && (
-        <>
-          <dt className="text-muted">Ready</dt>
-          <dd>
-            <When iso={o.ready_at} recent={recent} />
-            <div className="text-xs text-muted">after {after(o.ready_at)}</div>
-          </dd>
-        </>
-      )}
-      {o.completed_at ? (
-        <>
-          <dt className="text-muted">Done</dt>
-          <dd>
-            <When iso={o.completed_at} recent={recent} />
-            <div className="text-xs text-muted">Total time {after(o.completed_at)}</div>
-          </dd>
-        </>
-      ) : o.status === 'completed' ? (
-        <>
-          <dt className="text-muted">Done</dt>
-          <dd className="text-muted">Time not recorded</dd>
-        </>
-      ) : null}
     </dl>
   );
 }
@@ -189,12 +173,12 @@ export default function OwnerOrders() {
             key={f}
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
-            className={`${btn} capitalize ${filter === f ? 'bg-accent text-white' : 'bg-chip'}`}
+            className={`${btn} capitalize ${filter === f ? 'bg-accent text-on-accent' : 'bg-chip'}`}
           >
             {f}
           </button>
         ))}
-        <button onClick={() => setEditing('new')} className={`${btn} ml-auto bg-ok text-white`}>
+        <button onClick={() => setEditing('new')} className={`${btn} ml-auto bg-ok text-on-ok`}>
           + New order
         </button>
       </div>
@@ -204,7 +188,7 @@ export default function OwnerOrders() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => (
-          <article key={o.id} className="min-w-0 rounded-2xl border border-line bg-card p-4">
+          <article key={o.id} className={`min-w-0 rounded-lg border border-l-4 border-line bg-card p-4 ${STRIP[o.status] || ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 text-xl font-bold">
                 Table {o.table_number} <span className="text-sm font-normal text-muted">#{o.id}</span>

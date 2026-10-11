@@ -3,7 +3,7 @@ import { admin } from '@/lib/supabaseAdmin';
 import { startOfCafeDay } from '@/lib/cafeDay';
 import { UUID, parseOrderBody, priceOrder } from '@/lib/orderLogic';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const fail = (message, status = 400) => NextResponse.json({ error: message }, { status, headers: NO_STORE });

@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import { clock } from '@/lib/time';
-import { ensureSession } from '@/lib/guestSession';
+import { getSession, startSession } from '@/lib/guestSession';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const STEPS = ['received', 'preparing', 'ready'];
@@ -179,20 +179,41 @@ export default function MenuApp() {
   const [justPlaced, setJustPlaced] = useState(null);
   const [vegOnly, setVegOnly] = useState(false);
 
-  // Every QR scan (or table change) starts a brand-new visit:
-  // new session id, empty cart, and no orders from earlier guests.
+  // Every scan opens a fresh MENU and an empty CART. The guest's own orders for this table stay on
+  // screen until they are paid and finished; after that the next scan starts a brand-new visit.
   useEffect(() => {
+    let alive = true;
     try {
-      localStorage.removeItem('my-orders'); // older versions kept order history on the device
+      localStorage.removeItem('my-orders'); // older versions kept order history in a different place
     } catch {}
-    const s = ensureSession(table);
-    setSessionId(s.id);
+    setSessionId(null);
     setCart({});
     setMyOrders([]);
     setOrdersReady(false);
     setJustPlaced(null);
     setTab(null);
     setForm((f) => ({ ...f, note: '' }));
+
+    (async () => {
+      let s = getSession(table);
+      if (s) {
+        try {
+          const res = await fetch(`/api/orders?session=${encodeURIComponent(s.id)}`, { cache: 'no-store' });
+          if (res.ok) {
+            const r = await res.json();
+            if (!r.open) s = null; // everything was paid and finished: start a fresh visit
+          }
+        } catch {
+          // offline: keep the saved visit so the guest does not lose their orders
+        }
+      }
+      if (!s) s = startSession(table);
+      if (alive) setSessionId(s.id);
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [table]);
 
   // Load menu

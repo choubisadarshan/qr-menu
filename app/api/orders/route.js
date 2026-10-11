@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/supabaseAdmin';
 import { startOfCafeDay } from '@/lib/cafeDay';
-import { UUID, parseOrderBody, priceOrder } from '@/lib/orderLogic';
-
-// export const dynamic = 'force-dynamic';
+import { UUID, parseOrderBody, priceOrder, isSessionOpen } from '@/lib/orderLogic';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const fail = (message, status = 400) => NextResponse.json({ error: message }, { status, headers: NO_STORE });
 
 /**
  * GET /api/orders?session=<uuid>
- * Returns ONLY this visit's orders from today. A new QR scan has a new session id,
- * so it gets an empty list. Names and phone numbers are never sent back.
+ * Returns ONLY this visit's orders from today, plus `open`: whether the visit is still going
+ * (something unfinished or unpaid). When `open` is false the app starts a brand-new visit.
+ * Names and phone numbers are never sent back.
  */
 export async function GET(req) {
   const session = new URL(req.url).searchParams.get('session') ?? '';
-  if (!UUID.test(session)) return NextResponse.json({ orders: [] }, { headers: NO_STORE });
+  if (!UUID.test(session)) return NextResponse.json({ orders: [], open: false }, { headers: NO_STORE });
   try {
     const { data, error } = await admin()
       .from('orders')
@@ -24,7 +23,8 @@ export async function GET(req) {
       .gte('created_at', startOfCafeDay().toISOString())
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return NextResponse.json({ orders: data ?? [] }, { headers: NO_STORE });
+    const orders = data ?? [];
+    return NextResponse.json({ orders, open: isSessionOpen(orders) }, { headers: NO_STORE });
   } catch (e) {
     console.error('GET /api/orders', e);
     return fail('Could not load your orders.', 500);

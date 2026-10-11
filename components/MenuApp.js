@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import { clock } from '@/lib/time';
+import { ensureSession } from '@/lib/guestSession';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const STEPS = ['received', 'preparing', 'ready'];
@@ -13,34 +14,6 @@ const NOTE = {
   preparing: 'Your food is being prepared.',
   ready: 'Your order is ready.',
 };
-const STORE = 'my-orders';
-
-const startOfToday = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-// Orders placed from this phone are remembered in the browser, for today only.
-function readOrders() {
-  try {
-    const list = JSON.parse(localStorage.getItem(STORE) || '[]');
-    const since = startOfToday().getTime();
-    const fresh = Array.isArray(list) ? list.filter((x) => x && x.id && x.t >= since) : [];
-    // Yesterday's orders are dropped, so every new day starts clean
-    if (!Array.isArray(list) || fresh.length !== list.length) localStorage.setItem(STORE, JSON.stringify(fresh));
-    return fresh;
-  } catch {
-    return [];
-  }
-}
-function rememberOrder(id) {
-  try {
-    const list = [...readOrders(), { id, t: Date.now() }].slice(-30);
-    localStorage.setItem(STORE, JSON.stringify(list));
-  } catch {}
-}
-
 function Stepper({ q, name, onChange }) {
   if (!q) {
     return (
@@ -202,8 +175,25 @@ export default function MenuApp() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [myOrders, setMyOrders] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [justPlaced, setJustPlaced] = useState(null);
   const [vegOnly, setVegOnly] = useState(false);
+
+  // Every QR scan (or table change) starts a brand-new visit:
+  // new session id, empty cart, and no orders from earlier guests.
+  useEffect(() => {
+    try {
+      localStorage.removeItem('my-orders'); // older versions kept order history on the device
+    } catch {}
+    const s = ensureSession(table);
+    setSessionId(s.id);
+    setCart({});
+    setMyOrders([]);
+    setOrdersReady(false);
+    setJustPlaced(null);
+    setTab(null);
+    setForm((f) => ({ ...f, note: '' }));
+  }, [table]);
 
   // Load menu
   useEffect(() => {
@@ -219,49 +209,37 @@ export default function MenuApp() {
       });
   }, []);
 
-  // Load every order placed from this phone (with its items and status)
+  // Load ONLY the orders of this visit (the server filters by session id and today)
   const loadMine = useCallback(async () => {
-    const ids = readOrders().map((x) => x.id);
-    if (!ids.length) {
-      setMyOrders([]);
-      setOrdersReady(true);
-      return;
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`/api/orders?session=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('bad response');
+      const { orders } = await res.json();
+      setMyOrders(Array.isArray(orders) ? orders : []);
+    } catch {
+      // keep what is on screen; the next refresh will try again
     }
-    const { data } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .in('id', ids)
-      .gte('created_at', startOfToday().toISOString())
-      .order('created_at', { ascending: false });
-    setMyOrders(data || []);
     setOrdersReady(true);
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     loadMine();
   }, [loadMine]);
 
-  // Keep statuses live: realtime updates + a refresh every 30s and when the tab wakes up
-  const idKey = myOrders.map((o) => o.id).join(',');
+  // Keep statuses fresh: every 5 seconds while something is unfinished or unpaid, and when the tab wakes up
+  const needsPolling = myOrders.some((o) => o.status !== 'completed' || o.payment_status !== 'paid');
   useEffect(() => {
-    if (!idKey) return;
-    const ch = supabase
-      .channel('my-orders-' + idKey)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=in.(${idKey})` },
-        loadMine
-      )
-      .subscribe();
-    const poll = setInterval(loadMine, 30000);
-    const onVisible = () => document.visibilityState === 'visible' && loadMine();
+    if (!sessionId) return;
+    const visible = () => document.visibilityState === 'visible';
+    const poll = needsPolling ? setInterval(() => visible() && loadMine(), 5000) : null;
+    const onVisible = () => visible() && loadMine();
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      supabase.removeChannel(ch);
-      clearInterval(poll);
+      if (poll) clearInterval(poll);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [idKey, loadMine]);
+  }, [sessionId, needsPolling, loadMine]);
 
   const cats = ['All', ...new Set(menu.map((m) => m.category))];
   const lines = menu.filter((m) => cart[m.id]);
@@ -305,46 +283,39 @@ export default function MenuApp() {
     const phone = form.phone.trim();
     if (!name) return setError('Please enter your name so we can call it out.');
     if (phone && !/^\d{10}$/.test(phone)) return setError('Phone number should be 10 digits.');
+    if (!sessionId) return setError('Please wait a moment and try again.');
     setError('');
     setBusy(true);
 
-    const { data, error: e1 } = await supabase
-      .from('orders')
-      .insert({
-        table_number: table,
-        customer_name: name,
-        note: form.note.trim() || null,
-        subtotal,
-        tax,
-        total,
-      })
-      .select()
-      .single();
-    if (e1) {
+    let res;
+    try {
+      res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session: sessionId,
+          table,
+          name,
+          phone,
+          note: form.note.trim(),
+          items: lines.map((m) => ({ id: m.id, qty: cart[m.id] })),
+        }),
+      });
+    } catch {
       setBusy(false);
-      return setError('Could not send your order. Please try again.');
+      return setError('No connection. Please check your internet and try again.');
+    }
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setBusy(false);
+      return setError(result.error || 'Could not send your order. Please try again.');
     }
 
-    const { error: e2 } = await supabase.from('order_items').insert(
-      lines.map((m) => ({
-        order_id: data.id,
-        item_name: m.name,
-        price: m.price,
-        quantity: cart[m.id],
-      }))
-    );
-    if (e2) {
-      setBusy(false);
-      return setError('Order saved but items failed. Please tell our staff.');
-    }
-    if (phone) await supabase.from('order_contacts').insert({ order_id: data.id, phone });
-
-    rememberOrder(data.id);
     setForm((f) => ({ ...f, note: '' }));
     await loadMine();
     setBusy(false);
     setTab('active');
-    setJustPlaced(data.id);
+    setJustPlaced(result.order.id);
     go('orders', true); // replaces the checkout step, so Back returns to the menu
   }
 

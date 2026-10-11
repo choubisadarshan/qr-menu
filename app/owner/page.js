@@ -7,6 +7,7 @@ import InstallButton from '@/components/InstallButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import OwnerOrders from '@/components/OwnerOrders';
 import OwnerMenu from '@/components/OwnerMenu';
+import OwnerAnalytics from '@/components/OwnerAnalytics';
 
 export default function OwnerPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function OwnerPage() {
       </header>
 
       <div className="mb-4 flex gap-2" role="group" aria-label="Sections">
-        {['Orders', 'Menu'].map((t) => (
+        {['Orders', 'Analytics', 'Menu'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -45,7 +46,7 @@ export default function OwnerPage() {
         ))}
       </div>
 
-      {tab === 'Orders' ? <OwnerOrders /> : <OwnerMenu />}
+      {tab === 'Orders' ? <OwnerOrders /> : tab === 'Analytics' ? <OwnerAnalytics /> : <OwnerMenu />}
     </main>
   );
 }

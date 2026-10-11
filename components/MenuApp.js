@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
@@ -14,14 +14,22 @@ const NOTE = {
   ready: 'Your order is ready.',
 };
 const STORE = 'my-orders';
-const KEEP_MS = 12 * 60 * 60 * 1000; // orders stay on this screen for 12 hours
 
-// The order numbers placed from this phone are remembered in the browser.
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// Orders placed from this phone are remembered in the browser, for today only.
 function readOrders() {
   try {
     const list = JSON.parse(localStorage.getItem(STORE) || '[]');
-    const cutoff = Date.now() - KEEP_MS;
-    return Array.isArray(list) ? list.filter((x) => x && x.id && x.t > cutoff) : [];
+    const since = startOfToday().getTime();
+    const fresh = Array.isArray(list) ? list.filter((x) => x && x.id && x.t >= since) : [];
+    // Yesterday's orders are dropped, so every new day starts clean
+    if (!Array.isArray(list) || fresh.length !== list.length) localStorage.setItem(STORE, JSON.stringify(fresh));
+    return fresh;
   } catch {
     return [];
   }
@@ -102,7 +110,7 @@ function OrderCard({ o }) {
     <article className="mb-3 min-w-0 rounded-2xl border border-line bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold">Order #{o.id}</h3>
+          <h3 className="font-display text-2xl font-semibold leading-tight">Table {o.table_number}</h3>
           <p className="text-sm text-muted">Placed at {clock(o.created_at)}</p>
         </div>
         <span className={`rounded-md px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-chip'}`}>
@@ -161,7 +169,35 @@ export default function MenuApp() {
   const [loadError, setLoadError] = useState('');
   const [cat, setCat] = useState('All');
   const [cart, setCart] = useState({});
-  const [view, setView] = useState('menu'); // menu | checkout | orders
+  const [tab, setTab] = useState(null); // 'active' | 'completed' | null (pick automatically)
+  const [ordersReady, setOrdersReady] = useState(false);
+
+  // Which screen is showing lives in the address bar (?view=checkout / ?view=orders),
+  // so the phone's Back button moves between screens instead of leaving the site.
+  const rawView = params.get('view');
+  const view = rawView === 'checkout' || rawView === 'orders' ? rawView : 'menu';
+  const pushed = useRef(false);
+
+  const go = useCallback(
+    (v, replace = false) => {
+      const qs = new URLSearchParams({ table });
+      if (v !== 'menu') qs.set('view', v);
+      const url = `?${qs.toString()}`;
+      if (replace) {
+        window.history.replaceState(null, '', url);
+      } else {
+        window.history.pushState(null, '', url);
+        pushed.current = true;
+      }
+      window.scrollTo(0, 0);
+    },
+    [table]
+  );
+
+  const back = useCallback(() => {
+    if (pushed.current) window.history.back();
+    else go('menu', true);
+  }, [go]);
   const [form, setForm] = useState({ name: '', phone: '', note: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -188,14 +224,17 @@ export default function MenuApp() {
     const ids = readOrders().map((x) => x.id);
     if (!ids.length) {
       setMyOrders([]);
+      setOrdersReady(true);
       return;
     }
     const { data } = await supabase
       .from('orders')
       .select('*, order_items(*)')
       .in('id', ids)
+      .gte('created_at', startOfToday().toISOString())
       .order('created_at', { ascending: false });
     setMyOrders(data || []);
+    setOrdersReady(true);
   }, []);
 
   useEffect(() => {
@@ -236,9 +275,18 @@ export default function MenuApp() {
   const unpaid = myOrders.filter((o) => o.payment_status !== 'paid');
   const toPay = unpaid.reduce((a, o) => a + o.total, 0);
 
+  // Leaving the orders screen resets its banner and tab
   useEffect(() => {
-    if (view === 'checkout' && count === 0) setView('menu');
-  }, [view, count]);
+    if (view !== 'orders') {
+      setJustPlaced(null);
+      setTab(null);
+    }
+  }, [view]);
+
+  // After an order is placed, the cart is cleared once the orders screen is showing
+  useEffect(() => {
+    if (view === 'orders' && justPlaced) setCart({});
+  }, [view, justPlaced]);
 
   function change(id, d) {
     setCart((c) => {
@@ -292,85 +340,107 @@ export default function MenuApp() {
     if (phone) await supabase.from('order_contacts').insert({ order_id: data.id, phone });
 
     rememberOrder(data.id);
-    setCart({});
     setForm((f) => ({ ...f, note: '' }));
     await loadMine();
     setBusy(false);
+    setTab('active');
     setJustPlaced(data.id);
-    setView('orders');
-    window.scrollTo(0, 0);
+    go('orders', true); // replaces the checkout step, so Back returns to the menu
   }
 
   const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
   const panel = 'mb-4 rounded-2xl border border-line bg-card p-4';
-  const sectionTitle = 'mb-2 mt-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted';
 
-  /* ---------- MY ORDERS ---------- */
+  /* ---------- MY ORDERS (today only) ---------- */
   if (view === 'orders') {
+    const tabNow = tab ?? (active.length ? 'active' : 'completed');
+    const listNow = tabNow === 'active' ? active : completed;
     return (
-      <main className="mx-auto max-w-md overflow-x-hidden px-4 pb-32">
-        <header className="flex items-center justify-between gap-3 py-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Your orders</h1>
-            <p className="text-sm text-muted">Table {table} · {CONFIG.name}</p>
+      <main className="mx-auto max-w-md overflow-x-clip pb-32">
+        <header className="bg-hero px-4 pb-6 pt-4 text-hero-ink">
+          <div className="flex items-center justify-between gap-3">
+            <button onClick={back} className="-ml-2 rounded-md px-2 py-2 text-sm font-semibold text-hero-ink/90">
+              ← Menu
+            </button>
+            <ThemeToggle tone="hero" />
           </div>
-          <ThemeToggle />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.25em] text-hero-ink/70">Your table</p>
+          <h1 className="font-display text-5xl font-semibold leading-none">Table {table}</h1>
+          <p className="mt-2 text-sm text-hero-ink/80">{CONFIG.name} · today&apos;s orders</p>
         </header>
 
-        {justPlaced && (
-          <div role="status" className="mb-4 rounded-2xl bg-okbg p-4 font-semibold text-ok">
-            Order #{justPlaced} placed! The kitchen has received it.
-          </div>
-        )}
+        <div className="px-4 pt-4">
+          {justPlaced && (
+            <div role="status" className="mb-4 border border-ok bg-okbg p-4 font-semibold text-ok">
+              Order placed! The kitchen has received it.
+            </div>
+          )}
 
-        {myOrders.length === 0 ? (
-          <div className="py-16 text-center text-muted">
-            <div className="text-5xl" aria-hidden="true">🍽️</div>
-            <p className="mt-3">You haven't placed an order yet.</p>
-          </div>
-        ) : (
-          <>
-            <section className={panel}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted">Total to pay at counter</span>
-                <span className="text-2xl font-semibold text-accent">{money(toPay)}</span>
+          {!ordersReady ? (
+            <div className="space-y-3" aria-hidden="true">
+              <div className="h-20 animate-pulse rounded-lg bg-chip" />
+              <div className="h-40 animate-pulse rounded-lg bg-chip" />
+            </div>
+          ) : myOrders.length === 0 ? (
+            <div className="py-14 text-center text-muted">
+              <p>No orders yet today.</p>
+              <p className="mt-1 text-sm">Orders you place from this table will appear here.</p>
+            </div>
+          ) : (
+            <>
+              <section className={panel}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted">Total to pay at counter</span>
+                  <span className="text-2xl font-semibold tabular-nums text-accent">{money(toPay)}</span>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  {toPay > 0
+                    ? `${unpaid.length} unpaid order${unpaid.length > 1 ? 's' : ''} today. Pay at the counter when you finish.`
+                    : "All of today's orders are paid. Thank you!"}
+                </p>
+              </section>
+
+              <div
+                role="tablist"
+                aria-label="Order status"
+                className="sticky top-0 z-10 -mx-4 mb-3 grid grid-cols-2 gap-2 bg-bg px-4 py-3"
+              >
+                {[
+                  ['active', 'In progress', active.length],
+                  ['completed', 'Completed', completed.length],
+                ].map(([k, label, n]) => (
+                  <button
+                    key={k}
+                    role="tab"
+                    id={`tab-${k}`}
+                    aria-selected={tabNow === k}
+                    aria-controls="orders-panel"
+                    onClick={() => setTab(k)}
+                    className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold ${
+                      tabNow === k ? 'border-accent bg-accent text-on-accent' : 'border-line bg-card'
+                    }`}
+                  >
+                    {label}
+                    <span className={`rounded-sm px-1.5 text-xs ${tabNow === k ? 'bg-black/15' : 'bg-chip'}`}>{n}</span>
+                  </button>
+                ))}
               </div>
-              <p className="mt-1 text-sm text-muted">
-                {toPay > 0
-                  ? `Across ${unpaid.length} order${unpaid.length > 1 ? 's' : ''}. Pay at the counter when you finish.`
-                  : 'All your orders are paid. Thank you!'}
-              </p>
-            </section>
 
-            <h2 className={sectionTitle}>
-              In progress <span className="rounded-md bg-chip px-2 py-0.5 text-xs">{active.length}</span>
-            </h2>
-            {active.length === 0 ? (
-              <p className="mb-3 rounded-2xl bg-chip p-4 text-sm text-muted">No orders in progress.</p>
-            ) : (
-              active.map((o) => <OrderCard key={o.id} o={o} />)
-            )}
-
-            <h2 className={sectionTitle}>
-              Completed <span className="rounded-md bg-chip px-2 py-0.5 text-xs">{completed.length}</span>
-            </h2>
-            {completed.length === 0 ? (
-              <p className="mb-3 rounded-2xl bg-chip p-4 text-sm text-muted">No completed orders yet.</p>
-            ) : (
-              completed.map((o) => <OrderCard key={o.id} o={o} />)
-            )}
-          </>
-        )}
+              <div role="tabpanel" id="orders-panel" aria-labelledby={`tab-${tabNow}`}>
+                {listNow.length === 0 ? (
+                  <p className="rounded-lg bg-chip p-4 text-sm text-muted">
+                    {tabNow === 'active' ? 'No orders in progress.' : 'No completed orders yet.'}
+                  </p>
+                ) : (
+                  listNow.map((o) => <OrderCard key={o.id} o={o} />)
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-bg via-bg to-transparent p-4 pt-8">
-          <button
-            onClick={() => {
-              setJustPlaced(null);
-              setView('menu');
-              window.scrollTo(0, 0);
-            }}
-            className="w-full rounded-2xl bg-accent p-4 text-lg font-semibold text-on-accent"
-          >
+          <button onClick={back} className="w-full rounded-lg bg-accent p-4 text-lg font-semibold text-on-accent">
             + Order more items
           </button>
         </div>
@@ -379,11 +449,22 @@ export default function MenuApp() {
   }
 
   /* ---------- CHECKOUT ---------- */
+  if (view === 'checkout' && count === 0) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-16 text-center">
+        <p className="text-muted">Your cart is empty.</p>
+        <button onClick={back} className="mt-4 rounded-md bg-accent px-5 py-3 font-semibold text-on-accent">
+          Back to menu
+        </button>
+      </main>
+    );
+  }
+
   if (view === 'checkout') {
     return (
-      <main className="mx-auto max-w-md overflow-x-hidden px-4 pb-10">
+      <main className="mx-auto max-w-md overflow-x-clip px-4 pb-10">
         <div className="flex items-center justify-between gap-3">
-          <button onClick={() => setView('menu')} className="py-4 font-semibold text-accent">
+          <button onClick={back} className="py-4 font-semibold text-accent">
             ← Edit cart
           </button>
           <ThemeToggle />
@@ -456,17 +537,14 @@ export default function MenuApp() {
   });
 
   return (
-    <main className="mx-auto max-w-md overflow-x-hidden pb-32">
+    <main className="mx-auto max-w-md overflow-x-clip pb-32">
       <header className="bg-hero px-4 pb-7 pt-5 text-hero-ink">
         <div className="flex items-start justify-between gap-3">
           <p className="pt-2 text-xs font-semibold uppercase tracking-[0.25em] text-hero-ink/70">Table {table}</p>
           <div className="flex flex-none items-center gap-2">
             {myOrders.length > 0 && (
               <button
-                onClick={() => {
-                  setJustPlaced(null);
-                  setView('orders');
-                }}
+                onClick={() => go('orders')}
                 className="rounded-md bg-white/15 px-3.5 py-2.5 text-sm font-semibold"
               >
                 My orders
@@ -554,7 +632,7 @@ export default function MenuApp() {
       {count > 0 && (
         <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md p-4">
           <button
-            onClick={() => setView('checkout')}
+            onClick={() => go('checkout')}
             className="flex w-full items-center justify-between rounded-lg bg-bar p-3 pl-5 text-left text-white"
           >
             <span>

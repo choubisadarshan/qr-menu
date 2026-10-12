@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
+import { normalizeOptions } from '@/lib/options';
 
 const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
 const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
@@ -18,6 +19,7 @@ const EMPTY = {
   emoji: '🍽️',
   available: true,
   image_url: '',
+  options: '',
 };
 
 function toForm(m) {
@@ -32,6 +34,7 @@ function toForm(m) {
     emoji: m.emoji ?? '🍽️',
     available: m.available !== false,
     image_url: m.image_url ?? '',
+    options: m.options ? JSON.stringify(m.options, null, 2) : '',
   };
 }
 
@@ -64,6 +67,17 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
     if (!f.name.trim() || !f.category.trim() || f.price === '' || Number.isNaN(price) || price < 0) {
       return setError('Name, category and a valid price are required.');
     }
+    let options = null;
+    if (f.options.trim()) {
+      try {
+        options = JSON.parse(f.options);
+      } catch {
+        return setError('Customization options: this is not valid JSON.');
+      }
+      if (!normalizeOptions(options)) {
+        return setError('Customization options need a "groups" list, each with a "key" and "choices".');
+      }
+    }
     setBusy(true);
     setError('');
     const row = {
@@ -76,6 +90,7 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
       emoji: f.emoji.trim() || '🍽️',
       available: f.available,
       image_url: f.image_url || null,
+      options,
     };
     const q = f.id
       ? supabase.from('menu_items').update(row).eq('id', f.id)
@@ -164,6 +179,23 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
             <input type="checkbox" checked={f.available} onChange={flag('available')} />
             Available to order
           </label>
+          <details className="rounded-md border border-line p-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Customization options (advanced){f.options.trim() ? ' · set' : ''}
+            </summary>
+            <p className="mt-2 text-xs text-muted">
+              For dishes with choices such as size or crust. Leave empty for a normal dish. Each choice can add to the
+              price. Format: {'{"groups":[{"key":"size","label":"Size","required":true,"layout":"grid","choices":[{"id":"reg","name":"Regular","price":0}]}]}'}
+            </p>
+            <textarea
+              value={f.options}
+              onChange={set('options')}
+              rows={8}
+              spellCheck={false}
+              aria-label="Customization options as JSON"
+              className={`${input} mt-2 font-mono text-xs`}
+            />
+          </details>
         </div>
 
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
@@ -277,7 +309,10 @@ export default function OwnerMenu() {
                       <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${m.is_veg === false ? 'bg-red-700' : 'bg-ok'}`} />
                       {m.name}
                     </div>
-                    <div className="text-sm text-muted">{money(m.price ?? 0)}</div>
+                    <div className="text-sm text-muted">
+                    {m.options ? 'From ' : ''}{money(m.price ?? 0)}
+                    {m.options ? ' · Customizable' : ''}
+                  </div>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">

@@ -7,17 +7,14 @@ import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
+// Two statuses only
 const STATUS_OPTIONS = [
   { value: 'received', label: 'Received', dot: 'bg-amber-500' },
-  { value: 'preparing', label: 'Preparing', dot: 'bg-sky-500' },
-  { value: 'ready', label: 'Ready', dot: 'bg-ok' },
-  { value: 'completed', label: 'Completed', dot: 'bg-muted' },
+  { value: 'completed', label: 'Completed', dot: 'bg-ok' },
 ];
 const STRIP = {
   received: 'border-l-amber-500',
-  preparing: 'border-l-sky-500',
-  ready: 'border-l-ok',
-  completed: 'border-l-muted',
+  completed: 'border-l-ok',
 };
 const RANGE_OPTIONS = [
   { value: 'today', label: 'Today' },
@@ -206,9 +203,13 @@ export default function OwnerOrders() {
 
             <ul className="my-3 divide-y divide-line">
               {o.order_items.map((i) => (
-                <li key={i.id} className="flex justify-between py-1.5">
-                  <span>{i.quantity} × {i.item_name}</span>
-                  <span className="text-muted">{money(i.price * i.quantity)}</span>
+                <li key={i.id} className="py-1.5">
+                  <div className="flex justify-between gap-3">
+                    <span>{i.quantity} × {i.item_name}</span>
+                    <span className="text-muted">{money(i.price * i.quantity)}</span>
+                  </div>
+                  {i.options_text && <div className="text-xs text-muted">{i.options_text}</div>}
+                  {i.note && <div className="text-xs font-semibold text-accent">Note: {i.note}</div>}
                 </li>
               ))}
             </ul>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import Dropdown from '@/components/Dropdown';
+import { normalizeOptions } from '@/lib/options';
 
 export default function OrderForm({ order, phone = '', menu, onClose, onSaved }) {
   const [table, setTable] = useState(order?.table_number || '');
@@ -10,7 +11,13 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   const [ph, setPh] = useState(phone);
   const [note, setNote] = useState(order?.note || '');
   const [lines, setLines] = useState(
-    (order?.order_items || []).map((i) => ({ name: i.item_name, price: Number(i.price), quantity: i.quantity }))
+    (order?.order_items || []).map((i) => ({
+      name: i.item_name,
+      price: Number(i.price),
+      quantity: i.quantity,
+      options_text: i.options_text ?? null,
+      note: i.note ?? null,
+    }))
   );
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,9 +30,9 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
     const m = menu.find((x) => String(x.id) === id);
     if (!m) return;
     setLines((ls) => {
-      const i = ls.findIndex((l) => l.name === m.name);
+      const i = ls.findIndex((l) => l.name === m.name && !l.options_text && !l.note);
       if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, quantity: l.quantity + 1 } : l));
-      return [...ls, { name: m.name, price: Number(m.price), quantity: 1 }];
+      return [...ls, { name: m.name, price: Number(m.price), quantity: 1, options_text: null, note: null }];
     });
   }
 
@@ -65,7 +72,16 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
     }
     const { error: e2 } = await supabase
       .from('order_items')
-      .insert(lines.map((l) => ({ order_id: id, item_name: l.name, price: l.price, quantity: l.quantity })));
+      .insert(
+        lines.map((l) => ({
+          order_id: id,
+          item_name: l.name,
+          price: l.price,
+          quantity: l.quantity,
+          options_text: l.options_text ?? null,
+          note: l.note ?? null,
+        }))
+      );
     if (e2) return fail();
 
     if (ph) await supabase.from('order_contacts').upsert({ order_id: id, phone: ph });
@@ -99,8 +115,12 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
         <h3 className="mb-1 mt-4 text-sm font-semibold text-muted">Items</h3>
         {lines.length === 0 && <p className="py-2 text-sm text-muted">No items yet. Add a dish below.</p>}
         {lines.map((l, i) => (
-          <div key={l.name} className="flex items-center justify-between gap-2 border-t border-line py-2 first:border-0">
-            <span className="min-w-0 flex-1 truncate">{l.name}</span>
+          <div key={`${l.name}|${l.options_text || ''}|${i}`} className="flex items-center justify-between gap-2 border-t border-line py-2 first:border-0">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{l.name}</span>
+              {l.options_text && <span className="block truncate text-xs text-muted">{l.options_text}</span>}
+              {l.note && <span className="block truncate text-xs text-accent">Note: {l.note}</span>}
+            </span>
             <div className="flex items-center rounded-md bg-chip p-1">
               <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md bg-card text-lg font-semibold">−</button>
               <span className="min-w-8 text-center font-semibold">{l.quantity}</span>
@@ -115,7 +135,9 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
             variant="field"
             value=""
             onChange={addItem}
-            options={menu.map((m) => ({ value: String(m.id), label: `${m.name} · ${money(m.price)}` }))}
+            options={menu
+              .filter((m) => !normalizeOptions(m.options)) // customizable dishes are ordered by guests
+              .map((m) => ({ value: String(m.id), label: `${m.name} · ${money(m.price)}` }))}
             placeholder="+ Add a dish"
             ariaLabel="Add a dish"
           />

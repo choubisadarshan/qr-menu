@@ -1,10 +1,10 @@
-import { DM_Sans, Fraunces } from 'next/font/google';
+import { Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import ThemeSync from '@/components/ThemeSync';
 import { CONFIG } from '@/lib/config';
 import './globals.css';
 
-const body = DM_Sans({ subsets: ['latin'], variable: '--font-dm' });
-const display = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 
 export const metadata = {
   title: { default: `${CONFIG.name} · Scan & Order`, template: `%s · ${CONFIG.name}` },
@@ -14,7 +14,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#f6f1e8',
+  themeColor: '#f7f4ee',
   colorScheme: 'light dark',
 };
 
@@ -26,7 +26,7 @@ const capture = `window.addEventListener('beforeinstallprompt',function(e){e.pre
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${body.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${jakarta.variable} ${playfair.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <script dangerouslySetInnerHTML={{ __html: capture }} />

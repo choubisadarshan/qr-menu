@@ -9,14 +9,11 @@ import ThemeToggle from '@/components/ThemeToggle';
 
 const STRIP = {
   received: 'border-l-amber-500',
-  preparing: 'border-l-sky-500',
-  ready: 'border-l-ok',
 };
 
+// Two statuses only: Received -> Completed
 const NEXT = {
-  received: ['preparing', 'Start preparing'],
-  preparing: ['ready', 'Mark ready'],
-  ready: ['completed', 'Complete order'],
+  received: ['completed', 'Mark completed'],
 };
 
 export default function KitchenPage() {
@@ -153,6 +150,8 @@ export default function KitchenPage() {
                 {o.order_items.map((i) => (
                   <li key={i.id} className="py-2">
                     <b>{i.quantity} ×</b> {i.item_name}
+                    {i.options_text && <div className="text-sm text-muted">{i.options_text}</div>}
+                    {i.note && <div className="text-sm font-semibold text-accent">Note: {i.note}</div>}
                   </li>
                 ))}
               </ul>

@@ -18,7 +18,7 @@ export async function GET(req) {
   try {
     const { data, error } = await admin()
       .from('orders')
-      .select('id, table_number, status, payment_status, total, note, created_at, order_items(id, item_name, price, quantity)')
+      .select('id, table_number, status, payment_status, total, note, created_at, order_items(id, item_name, price, quantity, options_text, note)')
       .eq('session_id', session)
       .gte('created_at', startOfCafeDay().toISOString())
       .order('created_at', { ascending: false });
@@ -44,7 +44,7 @@ export async function POST(req) {
   }
   const parsed = parseOrderBody(body);
   if (parsed.error) return fail(parsed.error);
-  const { session, table, name, phone, note, qtyById } = parsed.value;
+  const { session, table, name, phone, note, lines } = parsed.value;
 
   try {
     const db = admin();
@@ -60,11 +60,11 @@ export async function POST(req) {
 
     const { data: dishes, error: menuError } = await db
       .from('menu_items')
-      .select('id, name, price, available')
-      .in('id', [...qtyById.keys()]);
+      .select('id, name, price, available, options')
+      .in('id', [...new Set(lines.map((l) => l.id))]);
     if (menuError) throw menuError;
 
-    const priced = priceOrder(dishes ?? [], qtyById);
+    const priced = priceOrder(dishes ?? [], lines);
     if (priced.error) return fail(priced.error, 409);
 
     const { data: order, error: orderError } = await db
@@ -83,7 +83,14 @@ export async function POST(req) {
     if (orderError) throw orderError;
 
     const { error: itemsError } = await db.from('order_items').insert(
-      priced.lines.map((l) => ({ order_id: order.id, item_name: l.name, price: l.price, quantity: l.quantity }))
+      priced.lines.map((l) => ({
+        order_id: order.id,
+        item_name: l.name,
+        price: l.price,
+        quantity: l.quantity,
+        options_text: l.options_text,
+        note: l.note,
+      }))
     );
     if (itemsError) {
       await db.from('orders').delete().eq('id', order.id); // do not leave an empty order behind

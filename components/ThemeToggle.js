@@ -4,18 +4,21 @@ import { useTheme } from '@/lib/useTheme';
 export default function ThemeToggle({ tone = 'default' }) {
   const { theme, choose } = useTheme();
 
-  if (!theme) return <span className="inline-block h-10 w-10" aria-hidden="true" />;
+  if (!theme) return <span className="inline-block h-9 w-9" aria-hidden="true" />;
 
   const dark = theme === 'dark';
-  const look = tone === 'hero' ? 'bg-white/15 text-hero-ink' : 'bg-chip';
+  const look =
+    tone === 'hero'
+      ? 'h-9 w-9 rounded-full bg-white/10 text-hero-ink backdrop-blur-sm transition hover:bg-white/20 active:scale-95'
+      : 'h-10 w-10 rounded-md bg-chip';
   return (
     <button
       onClick={() => choose(dark ? 'light' : 'dark')}
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={dark ? 'Light mode' : 'Dark mode'}
-      className={`grid h-10 w-10 flex-none place-items-center rounded-md ${look}`}
+      className={`grid flex-none place-items-center ${look}`}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {dark ? (
           <>
             <circle cx="12" cy="12" r="4" />

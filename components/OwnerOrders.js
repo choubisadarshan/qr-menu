@@ -21,6 +21,11 @@ const RANGE_OPTIONS = [
   { value: 'week', label: 'Last 7 days' },
   { value: 'all', label: 'All time' },
 ];
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+];
 const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
 
 const phoneOf = (o) => {
@@ -165,16 +170,23 @@ export default function OwnerOrders() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Dropdown variant="pill" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
-        {['all', 'active', 'completed'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`${btn} capitalize ${filter === f ? 'bg-accent text-on-accent' : 'bg-chip'}`}
-          >
-            {f}
-          </button>
-        ))}
+        {/* Desktop: filter buttons */}
+        <div className="hidden items-center gap-2 md:flex">
+          {FILTER_OPTIONS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              aria-pressed={filter === f.value}
+              className={`${btn} ${filter === f.value ? 'bg-accent text-on-accent' : 'bg-chip'}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {/* Mobile: one dropdown */}
+        <div className="md:hidden">
+          <Dropdown variant="pill" value={filter} onChange={setFilter} options={FILTER_OPTIONS} ariaLabel="Order filter" />
+        </div>
         <button onClick={() => setEditing('new')} className={`${btn} ml-auto bg-ok text-on-ok`}>
           + New order
         </button>

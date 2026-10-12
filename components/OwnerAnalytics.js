@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import { formatDuration } from '@/lib/time';
 import { PRESETS, rangeFor, eachDay, dayCount, toInputDate } from '@/lib/ranges';
+import Dropdown from '@/components/Dropdown';
 import { Panel, Kpi, ColumnChart, BarList, compactMoney } from '@/components/AnalyticsParts';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -157,7 +158,18 @@ export default function OwnerAnalytics() {
           ) : null
         }
       >
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Date range presets">
+        {/* Mobile: one dropdown for all presets */}
+        <div className="md:hidden">
+          <Dropdown
+            variant="field"
+            value={preset}
+            onChange={setPreset}
+            options={PRESETS.map((p) => ({ value: p.key, label: p.label }))}
+            ariaLabel="Date range"
+          />
+        </div>
+        {/* Desktop: preset chips */}
+        <div className="hidden flex-wrap gap-2 md:flex" role="group" aria-label="Date range presets">
           {PRESETS.map((p) => (
             <button
               key={p.key}

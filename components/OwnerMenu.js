@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
 import { normalizeOptions } from '@/lib/options';
+import OptionsEditor from '@/components/OptionsEditor';
 
 const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
 const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
@@ -75,7 +76,7 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
         return setError('Customization options: this is not valid JSON.');
       }
       if (!normalizeOptions(options)) {
-        return setError('Customization options need a "groups" list, each with a "key" and "choices".');
+        return setError('Customization options: add at least one group with a named choice (or clear the options for a normal dish).');
       }
     }
     setBusy(true);
@@ -179,21 +180,14 @@ function DishForm({ initial, categories, onCancel, onSaved }) {
             <input type="checkbox" checked={f.available} onChange={flag('available')} />
             Available to order
           </label>
-          <details className="rounded-md border border-line p-3">
+          <details className="rounded-md border border-line p-3" open={!!initial.options.trim()}>
             <summary className="cursor-pointer text-sm font-semibold">
-              Customization options (advanced){f.options.trim() ? ' · set' : ''}
+              Customization options{f.options.trim() ? ' · set' : ''}
             </summary>
-            <p className="mt-2 text-xs text-muted">
-              For dishes with choices such as size or crust. Leave empty for a normal dish. Each choice can add to the
-              price. Format: {'{"groups":[{"key":"size","label":"Size","required":true,"layout":"grid","choices":[{"id":"reg","name":"Regular","price":0}]}]}'}
-            </p>
-            <textarea
+            <OptionsEditor
               value={f.options}
-              onChange={set('options')}
-              rows={8}
-              spellCheck={false}
-              aria-label="Customization options as JSON"
-              className={`${input} mt-2 font-mono text-xs`}
+              onChange={(v) => setF((p) => ({ ...p, options: v }))}
+              basePrice={f.price}
             />
           </details>
         </div>

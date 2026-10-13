@@ -113,28 +113,53 @@ export function Tabs({ value, onChange, options, ariaLabel }) {
   );
 }
 
-export function SearchBox({ value, onChange, placeholder, className = '' }) {
+// Search field. `ref` goes to the outer label (used for "tap outside"), `inputRef` to the input.
+// Text is 16px on phones so iOS does not zoom the page when the field is focused (that zoom looks like jank).
+export function SearchBox({ value, onChange, placeholder, className = '', ref, inputRef, onFocus, onBlur }) {
   return (
-    <label className={`relative block ${className}`}>
+    <label ref={ref} className={`relative block ${className}`}>
       <span className="sr-only">{placeholder}</span>
       <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
       <input
+        ref={inputRef}
+        type="search"
+        enterKeyHint="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-line bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-accent"
+        className="w-full rounded-xl border border-line bg-card py-2.5 pl-9 pr-3 text-base outline-none transition-shadow duration-300 focus:ring-2 focus:ring-accent md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
       />
     </label>
   );
 }
 
+
 // Compact stat card (Orders page keeps the compact size; Menu page uses the same).
-export function StatCard({ label, value, sub }) {
+export function StatCard({ label, value, sub, align = 'center' }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-line bg-card p-3 text-center shadow-card">
+    <div className={`min-w-0 rounded-2xl border border-line bg-card p-3 shadow-card ${align === 'left' ? 'text-left' : 'text-center'}`}>
       <div className="truncate font-display text-xl font-semibold tabular-nums sm:text-2xl">{value}</div>
       <div className="text-xs font-medium">{label}</div>
       {sub && <div className="mt-0.5 hidden truncate text-[11px] text-muted sm:block">{sub}</div>}
     </div>
   );
 }
+
+// Big money figure for the Orders summary bar. tone: 'ok' (green) | 'warn' (amber) | undefined.
+// Numbers use the sans font (Playfair's old-style digits look uneven at this size) and a fixed min-height so nothing jumps.
+export function MoneyStat({ label, value, sub, tone }) {
+  const color = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink';
+  const bar = tone === 'ok' ? 'bg-ok' : tone === 'warn' ? 'bg-warn' : 'bg-line';
+  return (
+    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-line bg-card p-4 pl-5 shadow-card">
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${bar}`} />
+      <div className="truncate text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
+      <div className={`mt-1 truncate font-sans text-[1.7rem] font-bold leading-tight tabular-nums min-[420px]:text-3xl sm:text-4xl ${color}`}>{value}</div>
+      <div className="mt-1 min-h-4 truncate text-xs text-muted">{sub}</div>
+    </div>
+  );
+}
+

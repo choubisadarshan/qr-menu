@@ -1,11 +1,11 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { money } from '@/lib/config';
 import OrderForm from '@/components/OrderForm';
 import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
-import { PageHeader, StatCard, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
+import { PageHeader, StatCard, MoneyStat, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
 import { tableLabel } from '@/lib/orderType';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
@@ -20,6 +20,9 @@ const RANGE_OPTIONS = [
   { value: 'all', label: 'All time' },
 ];
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
+// Card action buttons: 44px touch target on phones, compact on desktop.
+const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-4 text-sm font-semibold sm:min-h-9';
+const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
 const phoneOf = (o) => {
   const c = o.order_contacts;
@@ -81,10 +84,15 @@ export default function OwnerOrders() {
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
   const [range, setRange] = useState('today');
-  const [filter, setFilter] = useState('all'); // all | received | completed
+  const [filter, setFilter] = useState('all'); // all | received | completed | collected | uncollected
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null); // null | 'new' | an order
   const [error, setError] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false); // phone: search field is expanded
+  const [clipBar, setClipBar] = useState(false); // keeps the hidden buttons clipped while they slide away
+  const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const clipTimer = useRef(null);
 
   const load = useCallback(async () => {
     let q = supabase
@@ -128,10 +136,42 @@ export default function OwnerOrders() {
     };
   }, [load]);
 
-  async function patch(id, fields) {
-    const { error: e } = await supabase.from('orders').update(fields).eq('id', id);
+  function openSearch() {
+    clearTimeout(clipTimer.current);
+    setClipBar(true);
+    setSearchOpen(true);
+  }
+  function closeSearch() {
+    setSearchOpen(false);
+    clearTimeout(clipTimer.current);
+    clipTimer.current = setTimeout(() => setClipBar(false), 320); // un-clip once the slide has finished
+  }
+  useEffect(() => () => clearTimeout(clipTimer.current), []);
+
+  // Tapping anywhere outside the search field shrinks it back (iOS does not always blur the input on a plain tap).
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onDown = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) searchInputRef.current?.blur();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [searchOpen]);
+
+  // Updates the card straight away (so nothing flickers), then saves. `only` makes the save conditional in the database.
+  async function patch(id, fields, only) {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...fields } : o)));
+    let q = supabase.from('orders').update(fields).eq('id', id);
+    if (only) q = q.eq(only.column, only.value);
+    const { error: e } = await q;
     setError(e ? 'Update failed.' : '');
     load();
+  }
+
+  // Unpaid -> Paid, one way only. The database check also refuses Paid -> Unpaid.
+  function markPaid(o) {
+    if (o.payment_status === 'paid') return;
+    patch(o.id, { payment_status: 'paid' }, { column: 'payment_status', value: 'unpaid' });
   }
 
   async function remove(o) {
@@ -150,21 +190,35 @@ export default function OwnerOrders() {
       .includes(q);
   const received = orders.filter((o) => o.status !== 'completed');
   const completed = orders.filter((o) => o.status === 'completed');
-  const shown = (filter === 'received' ? received : filter === 'completed' ? completed : orders).filter(matches);
-  const collected = orders.filter((o) => o.payment_status === 'paid').reduce((a, o) => a + o.total, 0);
+  const isPaid = (o) => o.payment_status === 'paid';
+  const paidOrders = orders.filter(isPaid);
+  const unpaidOrders = orders.filter((o) => !isPaid(o));
+  const byFilter = { all: orders, received, completed, collected: paidOrders, uncollected: unpaidOrders };
+  const shown = (byFilter[filter] || orders).filter(matches);
+  const sum = (list) => list.reduce((a, o) => a + Number(o.total), 0);
+  const collected = sum(paidOrders);
+  const notCollected = sum(unpaidOrders);
+  const rangeNote = range === 'today' ? 'Today' : range === 'week' ? 'Last 7 days' : 'All time';
 
   return (
     <section>
       <PageHeader title="Orders" subtitle="A little less busywork. A little more brewing." />
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
-        <StatCard
-          label={range === 'today' ? "Today's orders" : 'Orders'}
-          value={orders.length}
-          sub={`${money(collected)} collected`}
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-[1.4fr_1.4fr_1fr_1fr]">
+        <MoneyStat
+          tone="ok"
+          label={`Collected · ${rangeNote}`}
+          value={money(collected)}
+          sub={`${paidOrders.length} paid · ${money(collected + notCollected)} total sales`}
         />
-        <StatCard label="New orders" value={received.length} sub="Waiting to be accepted" />
-        <StatCard label="Completed" value={completed.length} sub="Finished orders" />
+        <MoneyStat
+          tone="warn"
+          label="Not collected"
+          value={money(notCollected)}
+          sub={`${unpaidOrders.length} unpaid order${unpaidOrders.length === 1 ? '' : 's'}`}
+        />
+        <StatCard align="left" label="New orders" value={received.length} sub="Waiting to be accepted" />
+        <StatCard align="left" label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -176,14 +230,33 @@ export default function OwnerOrders() {
             { value: 'all', label: 'All', count: orders.length },
             { value: 'received', label: 'Received', count: received.length },
             { value: 'completed', label: 'Completed', count: completed.length },
+            { value: 'collected', label: 'Collected', count: paidOrders.length },
+            { value: 'uncollected', label: 'Not collected', count: unpaidOrders.length },
           ]}
         />
-        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-          <SearchBox value={search} onChange={setSearch} placeholder="Search name, table or dish" className="min-w-0 flex-1 lg:w-64 lg:flex-none" />
-          <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
-          <button onClick={() => setEditing('new')} className={`${btn} flex items-center gap-1.5 bg-accent text-on-accent hover:bg-accent-hover`}>
-            <Icon name="plus" size={16} /> New order
-          </button>
+        <div className="flex items-center gap-2 lg:ml-auto">
+          {/* Phone: the search field grows while the other controls slide out of its way, then slide back. */}
+          <SearchBox
+            ref={searchRef}
+            inputRef={searchInputRef}
+            value={search}
+            onChange={setSearch}
+            onFocus={openSearch}
+            onBlur={closeSearch}
+            placeholder="Search name, table or dish"
+            className={`min-w-0 flex-1 transition-shadow ${EASE} lg:w-64 lg:flex-none ${searchOpen ? 'max-md:shadow-soft' : ''}`}
+          />
+          <div
+            className={`flex flex-none items-center gap-2 transition-[max-width,opacity,transform] ${EASE} md:max-w-none md:translate-x-0 md:opacity-100 ${
+              searchOpen ? 'max-md:pointer-events-none max-md:max-w-0 max-md:translate-x-4 max-md:opacity-0' : 'max-md:max-w-80 max-md:opacity-100'
+            } ${clipBar ? 'max-md:overflow-hidden' : ''}`}
+            aria-hidden={searchOpen ? 'true' : undefined}
+          >
+            <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
+            <button onClick={() => setEditing('new')} className={`${btn} flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap bg-accent text-on-accent hover:bg-accent-hover md:min-h-0`}>
+              <Icon name="plus" size={16} /> New order
+            </button>
+          </div>
         </div>
       </div>
 
@@ -219,28 +292,36 @@ export default function OwnerOrders() {
             </ul>
             {o.note && <p className="mb-3 rounded-lg bg-chip p-2 text-sm text-accent">Note: {o.note}</p>}
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-auto flex items-baseline gap-2">
-                <span className="text-xl font-semibold">{money(o.total)}</span>
-                <button
-                  onClick={() => patch(o.id, { payment_status: o.payment_status === 'paid' ? 'unpaid' : 'paid' })}
-                  title={o.payment_status === 'paid' ? 'Tap to mark unpaid' : 'Tap to mark paid'}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}
-                >
-                  {o.payment_status === 'paid' ? 'Paid ✓' : 'Unpaid'}
-                </button>
-              </span>
-              {o.status !== 'completed' ? (
-                <button onClick={() => patch(o.id, { status: 'completed' })} className={`${btn} bg-accent text-on-accent hover:bg-accent-hover`}>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
+              <div className="mr-auto min-w-0">
+                <div className="text-xl font-semibold tabular-nums">{money(o.total)}</div>
+                <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-warn'}`}>
+                  {isPaid(o) ? 'Collected' : 'Not collected'}
+                </div>
+              </div>
+              {/* One-way switch: Unpaid -> Paid. Once Paid it is locked (disabled), same size, so nothing shifts. */}
+              <button
+                type="button"
+                onClick={() => markPaid(o)}
+                disabled={isPaid(o)}
+                aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
+                title={isPaid(o) ? 'Paid' : 'Tap to mark as paid'}
+                className={`${act} w-28 flex-none border transition-colors ${
+                  isPaid(o) ? 'cursor-default border-transparent bg-okbg text-ok' : 'border-warn/40 bg-warnbg text-warn active:scale-[0.98]'
+                }`}
+              >
+                {isPaid(o) ? <Icon name="check" size={16} /> : <span aria-hidden="true" className="h-2 w-2 rounded-full bg-warn" />}
+                {isPaid(o) ? 'Paid' : 'Unpaid'}
+              </button>
+              {o.status !== 'completed' && (
+                <button onClick={() => patch(o.id, { status: 'completed' })} className={`${act} bg-accent text-on-accent hover:bg-accent-hover max-sm:basis-full`}>
                   Mark Completed
                 </button>
-              ) : (
-                <button onClick={() => patch(o.id, { status: 'received' })} className={`${btn} bg-chip`}>
-                  Reopen
-                </button>
               )}
-              <button onClick={() => setEditing(o)} className={`${btn} bg-chip`}>Edit</button>
-              <button onClick={() => remove(o)} className={`${btn} bg-chip text-red-600`}>Delete</button>
+              <div className="flex w-full gap-2 sm:w-auto">
+                <button onClick={() => setEditing(o)} className={`${act} flex-1 bg-chip sm:flex-none`}>Edit</button>
+                <button onClick={() => remove(o)} className={`${act} flex-1 bg-chip text-red-600 sm:flex-none`}>Delete</button>
+              </div>
             </div>
           </article>
         ))}

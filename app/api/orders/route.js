@@ -49,6 +49,12 @@ export async function POST(req) {
   try {
     const db = admin();
 
+    // The owner can switch the café to "closed" (see supabase/cafe-open.sql). If the table is missing, keep taking orders.
+    const { data: openRow, error: openError } = await db.from('cafe_settings').select('value').eq('key', 'open').maybeSingle();
+    if (!openError && openRow && openRow.value === false) {
+      return fail('We are not taking orders right now. Please ask our staff.', 403);
+    }
+
     // Basic spam guard: at most 8 orders per visit in 10 minutes
     const since = new Date(Date.now() - 10 * 60000).toISOString();
     const { count } = await db

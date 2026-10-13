@@ -5,6 +5,8 @@ import { CONFIG, money } from '@/lib/config';
 import { formatDuration } from '@/lib/time';
 import { PRESETS, rangeFor, eachDay, dayCount, toInputDate } from '@/lib/ranges';
 import Dropdown from '@/components/Dropdown';
+import { PageHeader, Icon } from '@/components/owner/ui';
+import { isTakeaway } from '@/lib/orderType';
 import { Panel, Kpi, ColumnChart, BarList, compactMoney } from '@/components/AnalyticsParts';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -53,6 +55,7 @@ export default function OwnerAnalytics() {
   const [showAll, setShowAll] = useState(false);
   const [data, setData] = useState({ loading: true, error: '', cur: null, prev: null });
   const req = useRef(0);
+  const [dishMeta, setDishMeta] = useState({}); // lower-case dish name -> { image_url, emoji }
 
   const range = useMemo(() => rangeFor(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
@@ -82,6 +85,24 @@ export default function OwnerAnalytics() {
       if (timer) clearInterval(timer);
     };
   }, [range, load]);
+
+  useEffect(() => {
+    let live = true;
+    supabase
+      .from('menu_items')
+      .select('name, image_url, emoji')
+      .then(({ data: rows }) => {
+        if (!live || !rows) return;
+        const map = {};
+        rows.forEach((m) => {
+          map[String(m.name).trim().toLowerCase()] = m;
+        });
+        setDishMeta(map);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const { cur, prev } = data;
   const t = cur?.totals;
@@ -138,67 +159,65 @@ export default function OwnerAnalytics() {
     if (t.unpaid_orders > 0) highlights.push(`${t.unpaid_orders} order${t.unpaid_orders > 1 ? 's are' : ' is'} still unpaid (${money(t.pending)}).`);
   }
 
+  const typeStats = useMemo(() => {
+    const r = { dine: { orders: 0, sales: 0 }, take: { orders: 0, sales: 0 } };
+    for (const tb of cur?.tables ?? []) {
+      const k = isTakeaway(tb.table_number) ? 'take' : 'dine';
+      r[k].orders += num(tb.orders);
+      r[k].sales += num(tb.sales);
+    }
+    return r;
+  }, [cur]);
+  const typeTotal = typeStats.dine.orders + typeStats.take.orders || 1;
+
   const visibleDishes = showAll ? dishRows : dishRows.slice(0, 8);
   const catTotal = (cur?.categories ?? []).reduce((a, c) => a + num(c.revenue), 0) || 1;
   const paidShare = t && num(t.sales) > 0 ? (num(t.collected) / num(t.sales)) * 100 : 0;
 
-  const chip = 'rounded-md border px-3.5 py-1.5 text-sm font-medium';
-  const dateInput = 'rounded-md bg-chip p-2.5 text-sm outline-none focus:ring-2 focus:ring-accent';
+  const dateInput = 'rounded-lg bg-chip p-2.5 text-sm outline-none focus:ring-2 focus:ring-accent';
+  const card = 'rounded-2xl shadow-card';
+  const busyTo = busiest ? (busiest.hour + 1) % 24 : 0;
 
   return (
-    <section className="space-y-4">
-      <Panel
-        title="Date range"
-        hint={range ? rangeLabel : 'Choose a valid range (up to 366 days).'}
-        action={
-          cur && range ? (
-            <button onClick={() => exportCsv(range, cur)} className="rounded-md bg-chip px-3.5 py-1.5 text-sm font-semibold">
-              Download CSV
-            </button>
-          ) : null
-        }
-      >
-        {/* Mobile: one dropdown for all presets */}
-        <div className="md:hidden">
-          <Dropdown
-            variant="field"
-            value={preset}
-            onChange={setPreset}
-            options={PRESETS.map((p) => ({ value: p.key, label: p.label }))}
-            ariaLabel="Date range"
-          />
-        </div>
-        {/* Desktop: preset chips */}
-        <div className="hidden flex-wrap gap-2 md:flex" role="group" aria-label="Date range presets">
-          {PRESETS.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPreset(p.key)}
-              aria-pressed={preset === p.key}
-              className={`${chip} ${preset === p.key ? 'border-accent bg-accent text-on-accent' : 'border-line bg-card'}`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        {preset === 'custom' && (
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:max-w-md">
-            <div>
-              <label htmlFor="an-from" className="mb-1 block text-xs text-muted">From</label>
-              <input id="an-from" type="date" className={`${dateInput} w-full`} value={customFrom}
-                max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="an-to" className="mb-1 block text-xs text-muted">To</label>
-              <input id="an-to" type="date" className={`${dateInput} w-full`} value={customTo}
-                min={customFrom || undefined} max={toInputDate(new Date())} onChange={(e) => setCustomTo(e.target.value)} />
-            </div>
-          </div>
+    <section className="space-y-5">
+      <PageHeader title="Analytics" subtitle="A clear picture of how your café is doing.">
+        <Dropdown
+          variant="pill"
+          align="right"
+          value={preset}
+          onChange={setPreset}
+          options={PRESETS.map((p) => ({ value: p.key, label: p.label }))}
+          ariaLabel="Date range"
+        />
+        {cur && range && (
+          <button
+            onClick={() => exportCsv(range, cur)}
+            className="flex items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold hover:bg-chip"
+          >
+            <Icon name="download" size={16} /> Export CSV
+          </button>
         )}
-      </Panel>
+      </PageHeader>
+
+      <p className="-mt-3 text-xs text-muted">{range ? rangeLabel : 'Choose a valid range (up to 366 days).'}</p>
+
+      {preset === 'custom' && (
+        <div className={`grid grid-cols-2 gap-3 border border-line bg-card p-4 sm:max-w-md ${card}`}>
+          <div>
+            <label htmlFor="an-from" className="mb-1 block text-xs text-muted">From</label>
+            <input id="an-from" type="date" className={`${dateInput} w-full`} value={customFrom}
+              max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="an-to" className="mb-1 block text-xs text-muted">To</label>
+            <input id="an-to" type="date" className={`${dateInput} w-full`} value={customTo}
+              min={customFrom || undefined} max={toInputDate(new Date())} onChange={(e) => setCustomTo(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       {data.error && (
-        <div role="alert" className="rounded-lg border border-line bg-card p-4 text-sm">
+        <div role="alert" className={`border border-line bg-card p-4 text-sm ${card}`}>
           <p className="font-semibold text-red-500">Could not load analytics.</p>
           <p className="mt-1 text-muted">
             Make sure the analytics SQL was run in Supabase and you are signed in as the owner. Details: {data.error}
@@ -208,8 +227,8 @@ export default function OwnerAnalytics() {
 
       {data.loading && !cur && !data.error && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg bg-chip" />
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl bg-chip" />
           ))}
         </div>
       )}
@@ -217,11 +236,160 @@ export default function OwnerAnalytics() {
       {cur && t && (
         <>
           {t.orders === 0 ? (
-            <p className="rounded-lg border border-line bg-card p-8 text-center text-muted">
-              No orders in this date range.
+            <p className={`border border-dashed border-line bg-card p-10 text-center text-muted ${card}`}>
+              No orders in this date range. Try a wider range.
             </p>
           ) : (
             <>
+              {/* Top 4 KPIs */}
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Kpi label="Total revenue" value={money(t.sales)} delta={pt ? change(num(t.sales), num(pt.sales)) : null} />
+                <Kpi label="Total orders" value={t.orders} delta={pt ? change(t.orders, pt.orders) : null} />
+                <Kpi label="Average order" value={money(Math.round(num(t.avg_order)))} delta={pt ? change(num(t.avg_order), num(pt.avg_order)) : null} />
+                <Kpi label="Items sold" value={cur.items_sold} delta={prev ? change(cur.items_sold, prev.items_sold) : null} />
+              </div>
+
+              {/* Sales overview + busiest hour */}
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                  {days > 1 ? (
+                    <Panel title="Sales overview" hint="Revenue by day. The best day is highlighted">
+                      <ColumnChart
+                        ariaLabel="Sales by day"
+                        labelEvery={Math.max(1, Math.ceil(dailyRows.length / 7))}
+                        data={dailyRows.map((d) => ({
+                          key: d.day,
+                          label: shortDate(d.day),
+                          value: d.sales,
+                          isMoney: true,
+                          title: `${shortDate(d.day)}: ${money(d.sales)} · ${d.orders} orders`,
+                        }))}
+                      />
+                    </Panel>
+                  ) : (
+                    <Panel title="Sales overview" hint="Revenue by hour">
+                      <ColumnChart
+                        ariaLabel="Sales by hour"
+                        labelEvery={3}
+                        data={hourRows.map((h) => ({
+                          key: h.hour,
+                          label: hourShort(h.hour),
+                          value: h.sales,
+                          isMoney: true,
+                          title: `${hourLong(h.hour)}: ${money(h.sales)} · ${h.orders} orders`,
+                        }))}
+                      />
+                    </Panel>
+                  )}
+                </div>
+
+                <section className={`flex min-w-0 flex-col justify-between bg-accent p-5 text-on-accent ${card}`}>
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
+                      <Icon name="clock" size={14} /> Busiest hour
+                    </div>
+                    <div className="mt-3 font-display text-4xl font-semibold">
+                      {busiest?.orders > 0 ? hourLong(busiest.hour) : '–'}
+                    </div>
+                    {busiest?.orders > 0 && <div className="text-sm opacity-80">to {hourLong(busyTo)}</div>}
+                  </div>
+                  <div className="mt-5 text-sm">
+                    {busiest?.orders > 0 ? (
+                      <>
+                        <strong>{busiest.orders}</strong> orders and <strong>{money(busiest.sales)}</strong> came in during this hour. A good time to have an extra pair of hands.
+                      </>
+                    ) : (
+                      'Not enough orders yet to find your rush hour.'
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              {/* Customer favourites + orders by type */}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Panel
+                  title="Customer favourites"
+                  hint={sortBy === 'qty' ? 'Ranked by number sold' : 'Ranked by revenue'}
+                  action={
+                    <div className="flex gap-1" role="group" aria-label="Rank dishes by">
+                      {[['qty', 'Sold'], ['revenue', 'Revenue']].map(([k, l]) => (
+                        <button key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${sortBy === k ? 'border-accent bg-accent text-on-accent' : 'border-line'}`}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  }
+                >
+                  {visibleDishes.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted">No dishes sold in this range.</p>
+                  ) : (
+                    <ol className="space-y-3">
+                      {(() => {
+                        const top = Math.max(...visibleDishes.map((d) => (sortBy === 'qty' ? d.qty : num(d.revenue))), 1);
+                        return visibleDishes.map((d, i) => {
+                          const meta = dishMeta[String(d.item_name).trim().toLowerCase()];
+                          const val = sortBy === 'qty' ? d.qty : num(d.revenue);
+                          return (
+                            <li key={d.item_name} className="flex items-center gap-3">
+                              <span className="w-4 flex-none text-center text-xs tabular-nums text-muted">{i + 1}</span>
+                              <span aria-hidden="true" className="grid h-11 w-11 flex-none place-items-center overflow-hidden rounded-xl bg-chip text-xl">
+                                {meta?.image_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={meta.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                ) : (
+                                  meta?.emoji || '🍽️'
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-baseline justify-between gap-3 text-sm">
+                                  <span className="truncate font-medium">{d.item_name}</span>
+                                  <span className="flex-none tabular-nums">{sortBy === 'qty' ? `${d.qty} sold` : money(d.revenue)}</span>
+                                </div>
+                                <div className="mt-1 h-1.5 rounded-full bg-chip" aria-hidden="true">
+                                  <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(3, (val / top) * 100)}%` }} />
+                                </div>
+                                <div className="mt-0.5 text-xs text-muted">{sortBy === 'qty' ? money(d.revenue) : `${d.qty} sold`}</div>
+                              </div>
+                            </li>
+                          );
+                        });
+                      })()}
+                    </ol>
+                  )}
+                  {dishRows.length > 8 && (
+                    <button onClick={() => setShowAll((v) => !v)} className="mt-3 text-sm font-semibold text-accent">
+                      {showAll ? 'Show top 8' : `Show all ${dishRows.length} dishes`}
+                    </button>
+                  )}
+                </Panel>
+
+                <Panel title="Orders by type" hint="Dine-in and takeaway">
+                  <div className="space-y-5">
+                    {[['Dine-in', typeStats.dine], ['Takeaway', typeStats.take]].map(([label, v]) => {
+                      const pct = Math.round((v.orders / typeTotal) * 100);
+                      return (
+                        <div key={label}>
+                          <div className="flex items-baseline justify-between text-sm">
+                            <span className="font-medium">{label}</span>
+                            <span className="tabular-nums text-muted">{v.orders} orders · {pct}%</span>
+                          </div>
+                          <div className="mt-1.5 h-2.5 rounded-full bg-chip" role="img" aria-label={`${label}: ${pct} percent of orders`}>
+                            <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="mt-1 text-xs text-muted">{money(v.sales)} in sales</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {typeStats.take.orders === 0 && (
+                    <p className="mt-4 rounded-lg bg-chip p-2.5 text-xs text-muted">
+                      No takeaway orders in this range. Orders whose table is labelled “Takeaway” (or Pickup / Parcel) are counted here.
+                    </p>
+                  )}
+                </Panel>
+              </div>
+
               {highlights.length > 0 && (
                 <Panel title="Highlights">
                   <ul className="space-y-1.5 text-sm">
@@ -236,10 +404,6 @@ export default function OwnerAnalytics() {
               )}
 
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Kpi label="Sales (incl. tax)" value={money(t.sales)} delta={pt ? change(num(t.sales), num(pt.sales)) : null} />
-                <Kpi label="Orders" value={t.orders} delta={pt ? change(t.orders, pt.orders) : null} />
-                <Kpi label="Average order" value={money(Math.round(num(t.avg_order)))} delta={pt ? change(num(t.avg_order), num(pt.avg_order)) : null} />
-                <Kpi label="Items sold" value={cur.items_sold} delta={prev ? change(cur.items_sold, prev.items_sold) : null} />
                 <Kpi label="Collected" value={money(t.collected)} sub="Paid at the counter" />
                 <Kpi label="Pending" value={money(t.pending)} sub={`${t.unpaid_orders} unpaid order${t.unpaid_orders === 1 ? '' : 's'}`} />
                 <Kpi label="Tax (GST) in sales" value={money(t.tax)} sub={`Net sales ${money(t.subtotal)}`} />
@@ -247,36 +411,6 @@ export default function OwnerAnalytics() {
               </div>
 
               <div className="grid gap-4 lg:grid-cols-2">
-                {days > 1 ? (
-                  <Panel title="Sales by day" hint="Highest day is highlighted">
-                    <ColumnChart
-                      ariaLabel="Sales by day"
-                      labelEvery={Math.max(1, Math.ceil(dailyRows.length / 7))}
-                      data={dailyRows.map((d) => ({
-                        key: d.day,
-                        label: shortDate(d.day),
-                        value: d.sales,
-                        isMoney: true,
-                        title: `${shortDate(d.day)}: ${money(d.sales)} · ${d.orders} orders`,
-                      }))}
-                    />
-                  </Panel>
-                ) : (
-                  <Panel title="Sales by hour" hint="When the money comes in">
-                    <ColumnChart
-                      ariaLabel="Sales by hour"
-                      labelEvery={3}
-                      data={hourRows.map((h) => ({
-                        key: h.hour,
-                        label: hourShort(h.hour),
-                        value: h.sales,
-                        isMoney: true,
-                        title: `${hourLong(h.hour)}: ${money(h.sales)} · ${h.orders} orders`,
-                      }))}
-                    />
-                  </Panel>
-                )}
-
                 {days > 1 && (
                   <Panel title="Busiest hours" hint="Orders by hour of day, across the range">
                     <ColumnChart
@@ -306,37 +440,6 @@ export default function OwnerAnalytics() {
                     />
                   </Panel>
                 )}
-
-                <Panel
-                  title="Most ordered dishes"
-                  hint={sortBy === 'qty' ? 'Ranked by number sold' : 'Ranked by revenue'}
-                  action={
-                    <div className="flex gap-1" role="group" aria-label="Rank dishes by">
-                      {[['qty', 'Sold'], ['revenue', 'Revenue']].map(([k, l]) => (
-                        <button key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
-                          className={`rounded-md border px-3 py-1 text-xs font-semibold ${sortBy === k ? 'border-accent bg-accent text-on-accent' : 'border-line'}`}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  }
-                >
-                  <BarList
-                    empty="No dishes sold in this range."
-                    rows={visibleDishes.map((d) => ({
-                      key: d.item_name,
-                      label: d.item_name,
-                      value: sortBy === 'qty' ? d.qty : num(d.revenue),
-                      right: sortBy === 'qty' ? `${d.qty} sold` : money(d.revenue),
-                      sub: sortBy === 'qty' ? money(d.revenue) : `${d.qty} sold`,
-                    }))}
-                  />
-                  {dishRows.length > 8 && (
-                    <button onClick={() => setShowAll((v) => !v)} className="mt-3 text-sm font-semibold text-accent">
-                      {showAll ? 'Show top 8' : `Show all ${dishRows.length} dishes`}
-                    </button>
-                  )}
-                </Panel>
 
                 <Panel title="Slow sellers" hint="Lowest-selling dishes on your menu. Consider a deal or removing them">
                   <BarList
@@ -375,7 +478,7 @@ export default function OwnerAnalytics() {
                 </Panel>
 
                 <Panel title="Payments" hint="Cash and UPI collected at the counter">
-                  <div className="flex h-3 overflow-hidden bg-chip" role="img"
+                  <div className="flex h-3 overflow-hidden rounded-full bg-chip" role="img"
                     aria-label={`${Math.round(paidShare)} percent of sales collected`}>
                     <div className="bg-ok" style={{ width: `${paidShare}%` }} />
                   </div>

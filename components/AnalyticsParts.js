@@ -12,7 +12,7 @@ export function compactMoney(n) {
 
 export function Panel({ title, hint, action, children }) {
   return (
-    <section className="min-w-0 rounded-lg border border-line bg-card p-4">
+    <section className="min-w-0 rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-semibold">{title}</h3>
@@ -27,7 +27,7 @@ export function Panel({ title, hint, action, children }) {
 
 export function Kpi({ label, value, delta, sub }) {
   return (
-    <div className="min-w-0 rounded-lg border border-line bg-card p-3">
+    <div className="min-w-0 rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="text-xs text-muted">{label}</div>
       <div className="mt-1 truncate font-display text-2xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1 min-h-4 text-xs">

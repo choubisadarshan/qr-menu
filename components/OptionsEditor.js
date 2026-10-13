@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { money } from '@/lib/config';
+import { Switch } from '@/components/owner/ui';
 
 /**
  * Form editor for menu_items.options (customization options).
  * It reads and writes the SAME JSON the customer screen already uses (see lib/options.js):
  *   { title, hint, groups: [{ key, label, required, layout, choices: [{ id, name, price, sub, desc, icon, diet }] }] }
+ * A choice can be switched off (available:false): it stays saved but customers do not see it.
  * Props:
  *   value     JSON string ('' = normal dish, no customization)
  *   onChange  called with the new JSON string ('' when there are no groups)
@@ -38,7 +40,7 @@ const slug = (s) =>
     .slice(0, 30);
 
 const newChoice = (name = '', price = '') => ({
-  _k: uid(), _auto: true, id: '', name, sub: '', desc: '', icon: '', diet: 'veg', price,
+  _k: uid(), _auto: true, id: '', name, sub: '', desc: '', icon: '', diet: 'veg', price, available: true,
 });
 const newGroup = (label = '', layout = 'list', required = true, choices = [newChoice()]) => ({
   _k: uid(), _auto: true, key: '', label, required, layout, choices,
@@ -84,6 +86,7 @@ function fromJson(text) {
           icon: String(c.icon ?? ''),
           diet: c.diet === 'non-veg' ? 'non-veg' : 'veg',
           price: c.price == null ? '' : String(c.price),
+          available: c.available !== false,
         })),
     }));
   return { model: { title: String(o.title ?? ''), hint: String(o.hint ?? ''), groups } };
@@ -118,6 +121,7 @@ function serialize(m) {
           name: c.name.trim(),
           price: Number(c.price) || 0,
         };
+        if (!c.available) out.available = false; // switched off: hidden from customers
         if (g.layout === 'grid' && c.sub.trim()) out.sub = c.sub.trim();
         if (g.layout === 'cards') {
           if (c.desc.trim()) out.desc = c.desc.trim();
@@ -356,7 +360,11 @@ export default function OptionsEditor({ value, onChange, basePrice }) {
                     ) : (
                       <span />
                     )}
-                    <div className="flex gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <label className="mr-1 flex items-center gap-2 text-xs font-semibold text-muted">
+                        <Switch size="sm" checked={c.available} onChange={(v) => upChoice(gi, ci, { available: v })} label="Choice available" />
+                        {c.available ? 'On' : 'Off'}
+                      </label>
                       <button type="button" aria-label="Move choice up" disabled={ci === 0} className={tiny}
                         onClick={() => upChoices(gi, (cs) => move(cs, ci, -1))}>↑</button>
                       <button type="button" aria-label="Move choice down" disabled={ci === g.choices.length - 1} className={tiny}

@@ -5,15 +5,13 @@ import { money } from '@/lib/config';
 import OrderForm from '@/components/OrderForm';
 import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
+import { PageHeader, StatCard, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
+import { tableLabel } from '@/lib/orderType';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
-// Two statuses only
-const STATUS_OPTIONS = [
-  { value: 'received', label: 'Received', dot: 'bg-amber-500' },
-  { value: 'completed', label: 'Completed', dot: 'bg-ok' },
-];
+// Two statuses only: received (amber) and completed (green)
 const STRIP = {
-  received: 'border-l-amber-500',
+  received: 'border-l-warn',
   completed: 'border-l-ok',
 };
 const RANGE_OPTIONS = [
@@ -21,12 +19,7 @@ const RANGE_OPTIONS = [
   { value: 'week', label: 'Last 7 days' },
   { value: 'all', label: 'All time' },
 ];
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
-];
-const btn = 'rounded-md px-4 py-1.5 text-sm font-semibold';
+const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
 
 const phoneOf = (o) => {
   const c = o.order_contacts;
@@ -88,7 +81,8 @@ export default function OwnerOrders() {
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
   const [range, setRange] = useState('today');
-  const [filter, setFilter] = useState('all'); // all | active | completed
+  const [filter, setFilter] = useState('all'); // all | received | completed
+  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null); // null | 'new' | an order
   const [error, setError] = useState('');
 
@@ -147,69 +141,67 @@ export default function OwnerOrders() {
     load();
   }
 
-  const shown = orders.filter(
-    (o) => filter === 'all' || (filter === 'active' ? o.status !== 'completed' : o.status === 'completed')
-  );
+  const q = search.trim().toLowerCase();
+  const matches = (o) =>
+    !q ||
+    [o.customer_name, o.table_number, `#${o.id}`, String(o.id), tableLabel(o.table_number), ...o.order_items.map((i) => i.item_name)]
+      .join(' ')
+      .toLowerCase()
+      .includes(q);
+  const received = orders.filter((o) => o.status !== 'completed');
+  const completed = orders.filter((o) => o.status === 'completed');
+  const shown = (filter === 'received' ? received : filter === 'completed' ? completed : orders).filter(matches);
   const collected = orders.filter((o) => o.payment_status === 'paid').reduce((a, o) => a + o.total, 0);
-  const toCollect = orders.filter((o) => o.payment_status !== 'paid').reduce((a, o) => a + o.total, 0);
 
   return (
     <section>
-      <div className="mb-4 grid grid-cols-3 gap-3 text-center">
-        {[
-          ['Orders', orders.length],
-          ['Collected', money(collected)],
-          ['To collect', money(toCollect)],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-line bg-card p-3">
-            <div className="text-xl font-semibold">{value}</div>
-            <div className="text-xs text-muted">{label}</div>
-          </div>
-        ))}
+      <PageHeader title="Orders" subtitle="A little less busywork. A little more brewing." />
+
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        <StatCard
+          label={range === 'today' ? "Today's orders" : 'Orders'}
+          value={orders.length}
+          sub={`${money(collected)} collected`}
+        />
+        <StatCard label="New orders" value={received.length} sub="Waiting to be accepted" />
+        <StatCard label="Completed" value={completed.length} sub="Finished orders" />
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Dropdown variant="pill" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
-        {/* Desktop: filter buttons */}
-        <div className="hidden items-center gap-2 md:flex">
-          {FILTER_OPTIONS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              aria-pressed={filter === f.value}
-              className={`${btn} ${filter === f.value ? 'bg-accent text-on-accent' : 'bg-chip'}`}
-            >
-              {f.label}
-            </button>
-          ))}
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <Tabs
+          ariaLabel="Order queue filter"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'All', count: orders.length },
+            { value: 'received', label: 'Received', count: received.length },
+            { value: 'completed', label: 'Completed', count: completed.length },
+          ]}
+        />
+        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+          <SearchBox value={search} onChange={setSearch} placeholder="Search name, table or dish" className="min-w-0 flex-1 lg:w-64 lg:flex-none" />
+          <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
+          <button onClick={() => setEditing('new')} className={`${btn} flex items-center gap-1.5 bg-accent text-on-accent hover:bg-accent-hover`}>
+            <Icon name="plus" size={16} /> New order
+          </button>
         </div>
-        {/* Mobile: one dropdown */}
-        <div className="md:hidden">
-          <Dropdown variant="pill" value={filter} onChange={setFilter} options={FILTER_OPTIONS} ariaLabel="Order filter" />
-        </div>
-        <button onClick={() => setEditing('new')} className={`${btn} ml-auto bg-ok text-on-ok`}>
-          + New order
-        </button>
       </div>
 
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
-      {shown.length === 0 && <p className="py-16 text-center text-muted">No orders here yet.</p>}
+      {shown.length === 0 && (
+        <p className="rounded-2xl border border-dashed border-line py-16 text-center text-muted">
+          {q ? 'No orders match your search.' : 'No orders here yet. Time for a coffee.'}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => (
-          <article key={o.id} className={`min-w-0 rounded-lg border border-l-4 border-line bg-card p-4 ${STRIP[o.status] || ''}`}>
+          <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-line bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 text-xl font-bold">
-                Table {o.table_number} <span className="text-sm font-normal text-muted">#{o.id}</span>
+                {tableLabel(o.table_number)} <span className="text-sm font-normal text-muted">#{o.id}</span>
               </div>
-              <Dropdown
-                variant="pill"
-                align="right"
-                value={o.status}
-                onChange={(v) => patch(o.id, { status: v })}
-                options={STATUS_OPTIONS}
-                ariaLabel={`Status of order ${o.id}`}
-              />
+              <StatusPill status={o.status} />
             </div>
             <OrderDetails o={o} />
 
@@ -228,13 +220,25 @@ export default function OwnerOrders() {
             {o.note && <p className="mb-3 rounded-lg bg-chip p-2 text-sm text-accent">Note: {o.note}</p>}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-auto text-xl font-semibold">{money(o.total)}</span>
-              <button
-                onClick={() => patch(o.id, { payment_status: o.payment_status === 'paid' ? 'unpaid' : 'paid' })}
-                className={`${btn} ${o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-chip text-accent'}`}
-              >
-                {o.payment_status === 'paid' ? 'Paid ✓' : 'Mark paid'}
-              </button>
+              <span className="mr-auto flex items-baseline gap-2">
+                <span className="text-xl font-semibold">{money(o.total)}</span>
+                <button
+                  onClick={() => patch(o.id, { payment_status: o.payment_status === 'paid' ? 'unpaid' : 'paid' })}
+                  title={o.payment_status === 'paid' ? 'Tap to mark unpaid' : 'Tap to mark paid'}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}
+                >
+                  {o.payment_status === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                </button>
+              </span>
+              {o.status !== 'completed' ? (
+                <button onClick={() => patch(o.id, { status: 'completed' })} className={`${btn} bg-accent text-on-accent hover:bg-accent-hover`}>
+                  Mark Completed
+                </button>
+              ) : (
+                <button onClick={() => patch(o.id, { status: 'received' })} className={`${btn} bg-chip`}>
+                  Reopen
+                </button>
+              )}
               <button onClick={() => setEditing(o)} className={`${btn} bg-chip`}>Edit</button>
               <button onClick={() => remove(o)} className={`${btn} bg-chip text-red-600`}>Delete</button>
             </div>

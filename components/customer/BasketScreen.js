@@ -109,7 +109,7 @@ export default function BasketScreen({
             <div className="mt-1 flex justify-between text-sm text-muted"><span>Tax ({Math.round(CONFIG.taxRate * 100)}%)</span><span className="tabular-nums">{money(totals.tax)}</span></div>
             <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3">
               <span className="font-display text-lg font-bold">Total due</span>
-              <span className="font-display text-xl font-bold tabular-nums text-accent">{money(totals.total)}</span>
+              <span className="font-sans text-xl font-bold tabular-nums text-accent">{money(totals.total)}</span>
             </div>
             <p className="mt-2 text-xs text-muted">Pay at the counter when you finish. No payment is taken here.</p>
           </section>

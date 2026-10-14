@@ -1,18 +1,10 @@
-import PwaSetup from '@/components/PwaSetup';
 import { CONFIG } from '@/lib/config';
 
 export const metadata = {
-  title: 'Owner',
-  manifest: '/owner/manifest.webmanifest',
-  appleWebApp: { capable: true, title: `${CONFIG.name} Owner` },
-  icons: { apple: '/pwa-icon?size=180&app=owner' },
+  title: { default: `Owner Dashboard · ${CONFIG.name}`, template: `%s · ${CONFIG.name}` },
+  description: `Owner workspace for ${CONFIG.name}.`,
 };
 
 export default function OwnerLayout({ children }) {
-  return (
-    <>
-      <PwaSetup />
-      {children}
-    </>
-  );
+  return children;
 }

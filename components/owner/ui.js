@@ -25,6 +25,13 @@ const PATHS = {
   check: <path d="m5 12 5 5 9-10" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   list: <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>,
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  save: <><path d="M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path d="M8 3v5h7V3M8 21v-7h8v7" /></>,
+  layers: <><path d="m12 3 9 5-9 5-9-5Z" /><path d="m3 13 9 5 9-5" /><path d="m3 17.5 9 5 9-5" /></>,
+  grid: <><rect x="4" y="4" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" /></>,
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  grip: <><circle cx="9" cy="6" r="1.2" /><circle cx="15" cy="6" r="1.2" /><circle cx="9" cy="12" r="1.2" /><circle cx="15" cy="12" r="1.2" /><circle cx="9" cy="18" r="1.2" /><circle cx="15" cy="18" r="1.2" /></>,
   sliders: <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></>,
 };
 
@@ -136,12 +143,11 @@ export function SearchBox({ value, onChange, placeholder, className = '', ref, i
   );
 }
 
-
 // Compact stat card (Orders page keeps the compact size; Menu page uses the same).
 export function StatCard({ label, value, sub, align = 'center' }) {
   return (
     <div className={`min-w-0 rounded-2xl border border-line bg-card p-3 shadow-card ${align === 'left' ? 'text-left' : 'text-center'}`}>
-      <div className="truncate font-display text-xl font-semibold tabular-nums sm:text-2xl">{value}</div>
+      <div className="truncate font-sans text-xl font-semibold tabular-nums sm:text-2xl">{value}</div>
       <div className="text-xs font-medium">{label}</div>
       {sub && <div className="mt-0.5 hidden truncate text-[11px] text-muted sm:block">{sub}</div>}
     </div>
@@ -152,14 +158,11 @@ export function StatCard({ label, value, sub, align = 'center' }) {
 // Numbers use the sans font (Playfair's old-style digits look uneven at this size) and a fixed min-height so nothing jumps.
 export function MoneyStat({ label, value, sub, tone }) {
   const color = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink';
-  const bar = tone === 'ok' ? 'bg-ok' : tone === 'warn' ? 'bg-warn' : 'bg-line';
   return (
-    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-line bg-card p-4 pl-5 shadow-card">
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${bar}`} />
+    <div className="min-w-0 rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="truncate text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
       <div className={`mt-1 truncate font-sans text-[1.7rem] font-bold leading-tight tabular-nums min-[420px]:text-3xl sm:text-4xl ${color}`}>{value}</div>
       <div className="mt-1 min-h-4 truncate text-xs text-muted">{sub}</div>
     </div>
   );
 }
-

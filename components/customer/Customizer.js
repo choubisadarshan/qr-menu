@@ -223,7 +223,7 @@ export default function Customizer({ item, line, vegOnly, onClose, onConfirm }) 
         <div className="safe-bottom flex items-center justify-between gap-3 border-t border-line bg-card p-4">
           <div className="pl-1">
             <span className="block text-[11px] font-medium text-muted">{step === 1 ? 'Starting from' : 'Total Price'}</span>
-            <span className="font-display text-lg font-bold tabular-nums">{money(step === 1 ? item.price : total)}</span>
+            <span className="font-sans text-lg font-bold tabular-nums">{money(step === 1 ? item.price : total)}</span>
           </div>
           <button
             onClick={confirm}

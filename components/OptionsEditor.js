@@ -1,31 +1,25 @@
 'use client';
-import { useState } from 'react';
-import { money } from '@/lib/config';
-import { Switch } from '@/components/owner/ui';
+import { useRef, useState } from 'react';
+import { CONFIG, money } from '@/lib/config';
+import { Icon, Switch } from '@/components/owner/ui';
 
 /**
- * Form editor for menu_items.options (customization options).
+ * "Customizations" tab of the Edit dish panel (two columns: option groups on the left, the selected group on the right)
+ * plus the "Customer preview" screen.
  * It reads and writes the SAME JSON the customer screen already uses (see lib/options.js):
- *   { title, hint, groups: [{ key, label, required, layout, choices: [{ id, name, price, sub, desc, icon, diet }] }] }
- * A choice can be switched off (available:false): it stays saved but customers do not see it.
+ *   { title, hint, groups: [{ key, label, required, layout, choices: [{ id, name, price, sub, desc, icon, diet, available }] }] }
  * Props:
  *   value     JSON string ('' = normal dish, no customization)
  *   onChange  called with the new JSON string ('' when there are no groups)
- *   basePrice the dish price (only used for the price-range preview)
- *
- * Which fields the customer screen actually shows, per layout:
- *   list  → name, price
- *   grid  → name, sub-label, price
- *   cards → icon, veg / non-veg, name, description, price   (works only as the FIRST group = "Step 1")
+ *   basePrice the dish price (shown in the sidebar card)
+ *   dish      { name, category, image_url, emoji } for the sidebar card and the preview heading
+ *   preview   true = show the customer preview instead of the editor
  */
 
-const box = 'w-full rounded-md bg-chip px-2.5 py-2 text-sm outline-none focus:ring-2 focus:ring-accent';
-const tiny = 'rounded-md bg-chip px-2.5 py-1 text-xs font-semibold disabled:opacity-40';
-
 const LAYOUTS = [
-  { value: 'list', label: 'List', help: 'A simple list. Good for crust, extras, spice level.' },
-  { value: 'grid', label: 'Grid', help: 'Compact tiles with a small sub-label. Good for sizes.' },
-  { value: 'cards', label: 'Cards', help: 'Big cards with icon and description. Use it as the FIRST group: customers pick it as step 1.' },
+  { value: 'list', label: 'List', icon: 'list', help: 'List' },
+  { value: 'grid', label: 'Grid', icon: 'grid', help: 'Grid' },
+  { value: 'cards', label: 'Cards', icon: 'layers', help: 'Cards' },
 ];
 
 /* ---------- model <-> JSON ---------- */
@@ -48,23 +42,20 @@ const newGroup = (label = '', layout = 'list', required = true, choices = [newCh
 const emptyModel = () => ({ title: '', hint: '', groups: [] });
 
 const TEMPLATES = [
-  { id: 'size', label: 'Size', make: () => newGroup('Choose Size', 'grid', true, [newChoice('Regular', '0'), newChoice('Medium', ''), newChoice('Large', '')]) },
-  { id: 'variety', label: 'Variety (cards)', make: () => newGroup('Choose your Dish', 'cards', true, [newChoice('', '0')]) },
+  { id: 'size', label: 'Size (Regular / Medium / Large)', make: () => newGroup('Pick a size', 'grid', true, [newChoice('Regular', '0'), newChoice('Medium', ''), newChoice('Large', '')]) },
+  { id: 'variety', label: 'Variety (cards)', make: () => newGroup('Choose your dish', 'cards', true, [newChoice('', '0')]) },
   { id: 'extras', label: 'Optional extras', make: () => newGroup('Extras', 'list', false, [newChoice('', '')]) },
   { id: 'blank', label: 'Blank group', make: () => newGroup() },
 ];
 
-// JSON text -> editor model. Returns { model } or { error }.
 function fromJson(text) {
   let o;
   try {
     o = JSON.parse(text);
   } catch {
-    return { error: 'This is not valid JSON.' };
+    return null;
   }
-  if (!o || typeof o !== 'object' || !Array.isArray(o.groups)) {
-    return { error: 'Needs a "groups" list, each group with a "key" and "choices".' };
-  }
+  if (!o || typeof o !== 'object' || !Array.isArray(o.groups)) return null;
   const groups = o.groups
     .filter((g) => g && typeof g === 'object')
     .map((g) => ({
@@ -89,10 +80,15 @@ function fromJson(text) {
           available: c.available !== false,
         })),
     }));
-  return { model: { title: String(o.title ?? ''), hint: String(o.hint ?? ''), groups } };
+  return { title: String(o.title ?? ''), hint: String(o.hint ?? ''), groups };
 }
 
-// A unique id/key. Saved ones never change; new ones are made from the name.
+// How many option groups are saved in a JSON string (used for the tab badge).
+export function countGroups(value) {
+  const m = value && value.trim() ? fromJson(value) : null;
+  return m ? m.groups.filter((g) => g.choices.some((c) => c.name.trim())).length : 0;
+}
+
 function uniqueId(wanted, taken, fallback) {
   const base = wanted || fallback;
   let id = base;
@@ -121,13 +117,11 @@ function serialize(m) {
           name: c.name.trim(),
           price: Number(c.price) || 0,
         };
-        if (!c.available) out.available = false; // switched off: hidden from customers
-        if (g.layout === 'grid' && c.sub.trim()) out.sub = c.sub.trim();
-        if (g.layout === 'cards') {
-          if (c.desc.trim()) out.desc = c.desc.trim();
-          if (c.icon.trim()) out.icon = c.icon.trim();
-          out.diet = c.diet;
-        }
+        if (!c.available) out.available = false;
+        if (c.sub.trim()) out.sub = c.sub.trim();
+        if (c.desc.trim()) out.desc = c.desc.trim();
+        if (c.icon.trim()) out.icon = c.icon.trim();
+        out.diet = c.diet;
         return out;
       }),
     });
@@ -140,68 +134,34 @@ function serialize(m) {
   return JSON.stringify(out, null, 2);
 }
 
-const move = (arr, i, d) => {
-  const j = i + d;
-  if (j < 0 || j >= arr.length) return arr;
+const reorder = (arr, from, to) => {
+  if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return arr;
   const a = [...arr];
-  [a[i], a[j]] = [a[j], a[i]];
+  const [x] = a.splice(from, 1);
+  a.splice(to, 0, x);
   return a;
 };
 
-/* ---------- small pieces ---------- */
+/* ---------- shared classes ---------- */
 
-function Field({ label, hint, children, className = '' }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-[11px] text-muted">{hint}</span>}
-    </label>
-  );
-}
+const eyebrow = 'text-[10px] font-semibold uppercase tracking-[0.18em] text-muted';
+const fieldBox = 'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
+const iconBtn = 'grid h-9 w-9 flex-none place-items-center rounded-lg text-muted transition-colors hover:bg-chip hover:text-ink disabled:opacity-35 disabled:hover:bg-transparent';
+const ROW_GRID = 'grid grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_6rem_2.75rem_1.75rem] items-center gap-2 sm:grid-cols-[1.25rem_2.75rem_minmax(0,1fr)_7.5rem_3rem_2rem] sm:gap-3';
 
-function Segmented({ value, onChange, options, ariaLabel }) {
-  return (
-    <div role="group" aria-label={ariaLabel} className="inline-flex rounded-md bg-chip p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          aria-pressed={value === o.value}
-          className={`rounded px-3 py-1 text-xs font-semibold ${value === o.value ? 'bg-accent text-on-accent' : ''}`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function priceRange(m, base) {
-  const b = Number(base);
-  if (!Number.isFinite(b)) return null;
-  let lo = b;
-  let hi = b;
-  let any = false;
-  for (const g of m.groups) {
-    const prices = g.choices.filter((c) => c.name.trim()).map((c) => Number(c.price) || 0);
-    if (!prices.length) continue;
-    any = true;
-    const opt = g.required ? [] : [0];
-    lo += Math.min(...prices, ...opt);
-    hi += Math.max(...prices, ...opt);
-  }
-  return any ? { lo: Math.max(0, lo), hi: Math.max(0, hi) } : null;
-}
+const priceLabel = (p) => {
+  const n = Number(p) || 0;
+  return n === 0 ? 'Included' : `${n > 0 ? '+' : '−'}${money(Math.abs(n))}`;
+};
 
 /* ---------- the editor ---------- */
 
-export default function OptionsEditor({ value, onChange, basePrice }) {
-  const [mode, setMode] = useState(() => (value.trim() && fromJson(value).error ? 'json' : 'form'));
-  const [model, setModel] = useState(() => (value.trim() ? fromJson(value).model || emptyModel() : emptyModel()));
-  const [raw, setRaw] = useState(value);
-  const [jsonError, setJsonError] = useState('');
+export default function OptionsEditor({ value, onChange, basePrice, dish = {}, preview = false }) {
+  const [model, setModel] = useState(() => (value.trim() ? fromJson(value) || emptyModel() : emptyModel()));
+  const [selK, setSelK] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState({}); // expanded choice rows
+  const dragFrom = useRef(null);
 
   const commit = (next) => {
     setModel(next);
@@ -212,203 +172,409 @@ export default function OptionsEditor({ value, onChange, basePrice }) {
   const upChoices = (gi, fn) => upGroup(gi, { choices: fn(model.groups[gi].choices) });
   const upChoice = (gi, ci, patch) => upChoices(gi, (cs) => cs.map((c, j) => (j === ci ? { ...c, ...patch } : c)));
 
-  function toJson() {
-    setRaw(serialize(model));
-    setJsonError('');
-    setMode('json');
-  }
-  function toForm() {
-    if (!raw.trim()) {
-      setModel(emptyModel());
-      onChange('');
-      setJsonError('');
-      return setMode('form');
-    }
-    const r = fromJson(raw);
-    if (r.error) return setJsonError(r.error);
-    setModel(r.model);
-    onChange(serialize(r.model));
-    setJsonError('');
-    setMode('form');
+  const found = model.groups.findIndex((g) => g._k === selK);
+  const gi = found >= 0 ? found : 0;
+  const g = model.groups[gi];
+  const totalChoices = model.groups.reduce((a, x) => a + x.choices.length, 0);
+
+  function addGroup(t) {
+    const ng = t.make();
+    setGroups([...model.groups, ng]);
+    setSelK(ng._k);
+    setAdding(false);
   }
 
-  const range = priceRange(model, basePrice);
-  const skipped = model.groups.filter((g) => !g.choices.some((c) => c.name.trim()));
+  function removeGroup() {
+    if (g.choices.some((c) => c.name.trim()) && !window.confirm(`Delete the group "${g.label || 'Untitled group'}" and all its choices?`)) return;
+    const next = model.groups.filter((_, i) => i !== gi);
+    setGroups(next);
+    setSelK(next[Math.max(0, gi - 1)]?._k ?? null);
+  }
 
-  /* ----- JSON mode ----- */
-  if (mode === 'json') {
-    return (
-      <div className="mt-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted">Advanced: edit the raw JSON. Leave empty for a normal dish.</p>
-          <button type="button" onClick={toForm} className={tiny}>← Back to form</button>
+  function moveGroup(d) {
+    const to = gi + d;
+    if (to < 0 || to >= model.groups.length) return;
+    setGroups(reorder(model.groups, gi, to));
+  }
+
+  if (preview) return <CustomerPreview model={model} dish={dish} />;
+
+  return (
+    <div className="grid min-h-full md:grid-cols-[17.5rem_minmax(0,1fr)]">
+      {/* ---------- Left: option groups ---------- */}
+      <aside className="border-b border-line bg-chip/40 p-4 md:border-b-0 md:border-r md:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <span className={eyebrow}>Option groups</span>
+          <span className="text-xs tabular-nums text-muted">{model.groups.length}</span>
         </div>
-        <textarea
-          value={raw}
-          onChange={(e) => {
-            setRaw(e.target.value);
-            setJsonError('');
-            onChange(e.target.value);
-          }}
-          rows={12}
-          spellCheck={false}
-          aria-label="Customization options as JSON"
-          className={`${box} font-mono text-xs`}
-        />
-        {jsonError && <p role="alert" className="text-xs text-red-600">{jsonError}</p>}
+
+        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-col md:overflow-visible md:pb-0">
+          {model.groups.map((x, i) => {
+            const active = i === gi;
+            return (
+              <button
+                key={x._k}
+                type="button"
+                onClick={() => setSelK(x._k)}
+                aria-current={active ? 'true' : undefined}
+                className={`flex w-52 flex-none items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors md:w-auto ${
+                  active ? 'border-ok/40 bg-okbg' : 'border-transparent hover:bg-chip'
+                }`}
+              >
+                <span className="text-xs tabular-nums text-muted">{String(i + 1).padStart(2, '0')}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{x.label || 'Untitled group'}</span>
+                  <span className="block text-[11px] text-muted">
+                    {x.choices.length} choice{x.choices.length === 1 ? '' : 's'} · {x.required ? 'Required' : 'Optional'}
+                  </span>
+                </span>
+                <Icon name="chevronRight" size={14} className="text-muted" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            aria-expanded={adding}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-card/60 py-3 text-sm font-medium transition-colors hover:bg-card"
+          >
+            <Icon name="plus" size={16} /> Add option group
+          </button>
+          {adding && (
+            <div className="mt-2 space-y-1 rounded-xl border border-line bg-card p-1.5 shadow-card">
+              {TEMPLATES.map((t) => (
+                <button key={t.id} type="button" onClick={() => addGroup(t)} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-chip">
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <p className="mt-4 flex items-center gap-2 text-xs text-ok">
+          <Icon name="layers" size={14} />
+          {totalChoices} choice{totalChoices === 1 ? '' : 's'} across {model.groups.length} group{model.groups.length === 1 ? '' : 's'}
+        </p>
+
+        <div className="mt-5 hidden border-t border-line pt-5 md:block">
+          <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl bg-chip text-5xl">
+            {dish.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={dish.image_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span aria-hidden="true">{dish.emoji || '🍽️'}</span>
+            )}
+          </div>
+          <p className="mt-3 text-[11px] text-muted">{dish.category || 'No category'}</p>
+          <p className="text-sm font-bold">{dish.name || 'Untitled dish'}</p>
+          {basePrice !== '' && Number.isFinite(Number(basePrice)) && (
+            <p className="mt-0.5 text-sm font-medium text-ok tabular-nums">From {money(basePrice)}</p>
+          )}
+        </div>
+      </aside>
+
+      {/* ---------- Right: the selected group ---------- */}
+      <section className="min-w-0 p-4 sm:p-6 md:p-8">
+        {!g ? (
+          <div className="mx-auto max-w-md py-10 text-center">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-okbg text-ok">
+              <Icon name="sliders" size={24} />
+            </span>
+            <div role="heading" aria-level={3} className="mt-4 text-xl font-semibold">No customizations yet</div>
+            <p className="mt-2 text-sm text-muted">
+              Add a group only if customers must choose something, like a size or a crust. For a normal dish with one price, leave this empty.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {TEMPLATES.map((t) => (
+                <button key={t.id} type="button" onClick={() => addGroup(t)} className="rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-chip">
+                  + {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className={eyebrow}>Group {String(gi + 1).padStart(2, '0')}</p>
+                <div role="heading" aria-level={3} className="mt-3 break-words text-2xl font-semibold sm:text-3xl">{g.label || 'Untitled group'}</div>
+                <p className="mt-2 text-xs text-muted">
+                  {g.choices.length} choice{g.choices.length === 1 ? '' : 's'} <span className="mx-1">·</span> Customers choose one
+                </p>
+              </div>
+              <div className="flex flex-none items-center">
+                <button type="button" aria-label="Move group up" disabled={gi === 0} onClick={() => moveGroup(-1)} className={iconBtn}><Icon name="arrowUp" size={16} /></button>
+                <button type="button" aria-label="Move group down" disabled={gi === model.groups.length - 1} onClick={() => moveGroup(1)} className={iconBtn}><Icon name="arrowDown" size={16} /></button>
+                <button type="button" aria-label="Delete group" onClick={removeGroup} className={`${iconBtn} hover:text-red-600`}><Icon name="trash" size={16} /></button>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <label htmlFor="g-name" className="mb-1.5 block text-sm font-medium">Group name</label>
+              <input id="g-name" className={fieldBox} value={g.label} maxLength={60} placeholder="e.g. Pick a size" onChange={(e) => upGroup(gi, { label: e.target.value })} />
+            </div>
+
+            <div className="mt-5 grid items-center gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="g-sel" className="mb-1.5 block text-sm font-medium">Selection</label>
+                <select id="g-sel" className={fieldBox} value="one" onChange={() => {}}>
+                  <option value="one">Choose one</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between gap-4 sm:pt-5">
+                <div>
+                  <div className="text-sm font-medium">Required group</div>
+                  <div className="text-[11px] text-muted">A choice must be selected</div>
+                </div>
+                <Switch checked={g.required} onChange={(v) => upGroup(gi, { required: v })} label="Required group" />
+              </div>
+            </div>
+
+            <div className="mt-7 border-t border-line pt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-base font-semibold">Choices</span>
+                  <span className="text-xs tabular-nums text-muted">{g.choices.length}</span>
+                </div>
+                <div role="group" aria-label="Layout" className="inline-flex rounded-lg border border-line bg-card p-0.5">
+                  {LAYOUTS.map((l) => (
+                    <button
+                      key={l.value}
+                      type="button"
+                      aria-pressed={g.layout === l.value}
+                      onClick={() => upGroup(gi, { layout: l.value })}
+                      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${g.layout === l.value ? 'bg-okbg text-ok' : 'text-muted hover:text-ink'}`}
+                    >
+                      <Icon name={l.icon} size={14} /> {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`${ROW_GRID} mt-5 px-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted`}>
+                <span className="col-span-2" />
+                <span>Choice name</span>
+                <span>Extra price</span>
+                <span>On</span>
+                <span />
+              </div>
+
+              <ul className="mt-2 border-t border-line">
+                {g.choices.map((c, ci) => {
+                  const isOpen = !!open[c._k];
+                  return (
+                    <li
+                      key={c._k}
+                      data-row
+                      className="border-b border-line"
+                      onDragOver={(e) => dragFrom.current !== null && e.preventDefault()}
+                      onDrop={() => {
+                        const from = dragFrom.current;
+                        dragFrom.current = null;
+                        if (from !== null) upChoices(gi, (cs) => reorder(cs, from, ci));
+                      }}
+                    >
+                      <div className={`${ROW_GRID} py-3`}>
+                        <span
+                          draggable
+                          aria-hidden="true"
+                          title="Drag to reorder"
+                          onDragStart={(e) => {
+                            dragFrom.current = ci;
+                            e.dataTransfer.effectAllowed = 'move';
+                            const row = e.currentTarget.closest('[data-row]');
+                            if (row) e.dataTransfer.setDragImage(row, 16, 16);
+                          }}
+                          onDragEnd={() => (dragFrom.current = null)}
+                          className="cursor-grab text-line active:cursor-grabbing"
+                        >
+                          <Icon name="grip" size={16} />
+                        </span>
+                        <input
+                          aria-label="Choice icon (emoji)"
+                          className="h-10 w-full rounded-lg bg-okbg/70 text-center text-xl outline-none placeholder:text-muted/50 focus:ring-2 focus:ring-accent/40 sm:h-11"
+                          value={c.icon}
+                          maxLength={8}
+                          placeholder="🙂"
+                          onChange={(e) => upChoice(gi, ci, { icon: e.target.value })}
+                        />
+                        <input
+                          aria-label="Choice name"
+                          className={`min-w-0 rounded-md bg-transparent px-1.5 py-2 text-base font-medium outline-none hover:bg-chip focus:bg-chip focus:ring-2 focus:ring-accent/40 md:text-sm ${c.available ? '' : 'opacity-50'}`}
+                          value={c.name}
+                          maxLength={60}
+                          placeholder={g.layout === 'grid' ? 'Regular' : g.layout === 'cards' ? 'Classic Margherita' : 'Hand-tossed'}
+                          onChange={(e) => upChoice(gi, ci, { name: e.target.value })}
+                        />
+                        <div className="relative">
+                          <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted">{CONFIG.currency}</span>
+                          <input
+                            aria-label="Extra price"
+                            type="number"
+                            step="0.5"
+                            inputMode="decimal"
+                            className="w-full rounded-lg border border-line bg-card py-2 pl-6 pr-1.5 text-base tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm"
+                            value={c.price}
+                            placeholder="0"
+                            onChange={(e) => upChoice(gi, ci, { price: e.target.value })}
+                          />
+                        </div>
+                        <Switch checked={c.available} onChange={(v) => upChoice(gi, ci, { available: v })} label={`Show ${c.name || 'this choice'} to customers`} />
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          aria-label={isOpen ? 'Hide choice details' : 'Show choice details'}
+                          onClick={() => setOpen((o) => ({ ...o, [c._k]: !o[c._k] }))}
+                          className="grid h-8 w-7 place-items-center text-muted sm:w-8"
+                        >
+                          <Icon name="chevronDown" size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+
+                      {isOpen && (
+                        <div className="mb-3 ml-0 space-y-3 rounded-xl bg-chip/50 p-3 sm:ml-8">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-muted">Small note under the name (tiles)</label>
+                              <input className={fieldBox} value={c.sub} maxLength={60} placeholder={'7" • Serves 1'} onChange={(e) => upChoice(gi, ci, { sub: e.target.value })} />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-muted">Description (cards)</label>
+                              <input className={fieldBox} value={c.desc} maxLength={160} placeholder="Fresh mozzarella, tomato & basil" onChange={(e) => upChoice(gi, ci, { desc: e.target.value })} />
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div role="group" aria-label="Veg or non-veg" className="inline-flex rounded-lg border border-line bg-card p-0.5">
+                              {[['veg', 'Veg'], ['non-veg', 'Non-veg']].map(([v, label]) => (
+                                <button key={v} type="button" aria-pressed={c.diet === v} onClick={() => upChoice(gi, ci, { diet: v })}
+                                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${c.diet === v ? 'bg-okbg text-ok' : 'text-muted'}`}>
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center">
+                              <button type="button" aria-label="Move choice up" disabled={ci === 0} onClick={() => upChoices(gi, (cs) => reorder(cs, ci, ci - 1))} className={iconBtn}><Icon name="arrowUp" size={16} /></button>
+                              <button type="button" aria-label="Move choice down" disabled={ci === g.choices.length - 1} onClick={() => upChoices(gi, (cs) => reorder(cs, ci, ci + 1))} className={iconBtn}><Icon name="arrowDown" size={16} /></button>
+                              <button type="button" onClick={() => upChoices(gi, (cs) => cs.filter((_, j) => j !== ci))} className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-red-600 hover:bg-chip">
+                                <Icon name="trash" size={14} /> Remove choice
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <button
+                type="button"
+                onClick={() => upChoices(gi, (cs) => [...cs, newChoice('', '')])}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-card px-4 py-2.5 text-sm font-medium shadow-card hover:bg-chip"
+              >
+                <Icon name="plus" size={16} /> Add choice
+              </button>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4 text-xs text-muted">
+              <span className="flex flex-wrap items-center gap-x-2">
+                <Icon name="eye" size={16} className="mr-1" />
+                {LAYOUTS.find((l) => l.value === g.layout).label} view <span>·</span> {g.required ? 'Required' : 'Optional'} <span>·</span> One selection
+              </span>
+              <Icon name="check" size={16} className="text-ok" />
+            </div>
+
+            <details className="mt-5 rounded-xl border border-line p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-muted">Popup heading shown to customers (optional)</summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Heading</label>
+                  <input className={fieldBox} value={model.title} maxLength={60} placeholder="Craft your pizza" onChange={(e) => commit({ ...model, title: e.target.value })} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Small line under the heading</label>
+                  <input className={fieldBox} value={model.hint} maxLength={80} placeholder="5 varieties • Hand-tossed crust" onChange={(e) => commit({ ...model, hint: e.target.value })} />
+                </div>
+              </div>
+            </details>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* ---------- Customer preview ---------- */
+
+function CustomerPreview({ model, dish }) {
+  const [picks, setPicks] = useState({}); // groupKey -> choiceKey | null
+  const groups = model.groups
+    .map((g) => ({ ...g, choices: g.choices.filter((c) => c.name.trim() && c.available) }))
+    .filter((g) => g.choices.length);
+
+  const picked = (g) => (picks[g._k] === undefined ? (g.required ? g.choices[0]._k : null) : picks[g._k]);
+  const pick = (g, c) => setPicks((p) => ({ ...p, [g._k]: picked(g) === c._k && !g.required ? null : c._k }));
+
+  if (!groups.length) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <div role="heading" aria-level={3} className="text-xl font-semibold">Nothing to preview yet</div>
+        <p className="mt-2 text-sm text-muted">Add an option group with at least one named choice, then come back to see what customers will see.</p>
       </div>
     );
   }
 
-  /* ----- form mode ----- */
   return (
-    <div className="mt-3 space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs text-muted">
-          For dishes with choices such as size, crust or variety. Each choice can add to the price. Leave empty for a normal dish.
-        </p>
-        <button type="button" onClick={toJson} className={`${tiny} flex-none`}>Edit as JSON</button>
+    <div className="mx-auto w-full max-w-[44rem] px-4 py-8 sm:px-6 sm:py-10">
+      <p className={eyebrow}>Customer view</p>
+      <div role="heading" aria-level={3} className="mt-4 text-3xl font-semibold">{model.title || `Customize ${dish.name || 'your dish'}`}</div>
+      <p className="mt-3 text-sm text-muted">{model.hint || dish.name}</p>
+
+      <div className="mt-8 space-y-8">
+        {groups.map((g) => {
+          const cur = picked(g);
+          return (
+            <section key={g._k} aria-label={g.label}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-lg">{g.label || 'Options'}</div>
+                <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${g.required ? 'bg-okbg text-ok' : 'bg-chip text-muted'}`}>
+                  {g.required ? 'Required' : 'Optional'}
+                </span>
+              </div>
+              <div className={`grid gap-3 ${g.layout === 'cards' ? 'sm:grid-cols-2' : g.layout === 'grid' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
+                {g.choices.map((c) => {
+                  const on = cur === c._k;
+                  return (
+                    <button
+                      key={c._k}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => pick(g, c)}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 text-left shadow-card transition-colors ${
+                        g.layout === 'list' ? 'py-5' : g.layout === 'grid' ? 'py-4' : 'py-4'
+                      } ${on ? 'border-ok bg-okbg' : 'border-line bg-chip/50 hover:bg-chip'}`}
+                    >
+                      {c.icon && <span aria-hidden="true" className="flex-none text-2xl">{c.icon}</span>}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">{c.name}</span>
+                        {g.layout === 'cards' && c.desc && <span className="mt-1 block line-clamp-2 text-[11px] text-muted">{c.desc}</span>}
+                        {g.layout === 'grid' && c.sub && <span className="mt-0.5 block text-[11px] text-muted">{c.sub}</span>}
+                      </span>
+                      <span className="flex flex-none items-center gap-1.5 text-xs tabular-nums">
+                        {priceLabel(c.price)}
+                        {on && <Icon name="check" size={14} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </div>
-
-      {model.groups.length > 0 && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Field label="Popup title (optional)">
-            <input className={box} value={model.title} maxLength={60} placeholder="Customize Artisanal Pasta"
-              onChange={(e) => commit({ ...model, title: e.target.value })} />
-          </Field>
-          <Field label="Short hint (optional)">
-            <input className={box} value={model.hint} maxLength={80} placeholder="4 sauces • Penne / Spaghetti"
-              onChange={(e) => commit({ ...model, hint: e.target.value })} />
-          </Field>
-        </div>
-      )}
-
-      {model.groups.map((g, gi) => {
-        const layout = LAYOUTS.find((l) => l.value === g.layout);
-        return (
-          <fieldset key={g._k} className="space-y-2 rounded-md border border-line p-2.5">
-            <legend className="px-1 text-xs font-semibold text-muted">Group {gi + 1}</legend>
-
-            <div className="flex items-end gap-2">
-              <Field label="Group name" className="flex-1">
-                <input className={box} value={g.label} maxLength={60} placeholder="e.g. Choose Size"
-                  onChange={(e) => upGroup(gi, { label: e.target.value })} />
-              </Field>
-              <button type="button" aria-label={`Move group ${gi + 1} up`} disabled={gi === 0} className={tiny}
-                onClick={() => setGroups(move(model.groups, gi, -1))}>↑</button>
-              <button type="button" aria-label={`Move group ${gi + 1} down`} disabled={gi === model.groups.length - 1} className={tiny}
-                onClick={() => setGroups(move(model.groups, gi, 1))}>↓</button>
-              <button type="button" aria-label={`Delete group ${gi + 1}`} className={`${tiny} text-red-600`}
-                onClick={() => {
-                  if (g.choices.some((c) => c.name.trim()) && !window.confirm(`Delete the group "${g.label || gi + 1}" and its choices?`)) return;
-                  setGroups(model.groups.filter((_, i) => i !== gi));
-                }}>✕</button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <Segmented ariaLabel="Layout" value={g.layout} onChange={(v) => upGroup(gi, { layout: v })} options={LAYOUTS} />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={g.required} onChange={(e) => upGroup(gi, { required: e.target.checked })} />
-                Required
-              </label>
-            </div>
-            <p className="text-[11px] text-muted">{layout.help}</p>
-            {g.layout === 'cards' && gi !== 0 && (
-              <p role="status" className="text-[11px] font-semibold text-accent">
-                Cards only work as the first group. Move this group to the top, or it will show as a plain list.
-              </p>
-            )}
-
-            <div className="space-y-2">
-              {g.choices.map((c, ci) => (
-                <div key={c._k} className="space-y-2 rounded-md border border-line bg-card p-2">
-                  <div className="flex gap-2">
-                    {g.layout === 'cards' && (
-                      <Field label="Icon" className="w-14 flex-none">
-                        <input className={`${box} text-center`} value={c.icon} maxLength={8} placeholder="🍕"
-                          onChange={(e) => upChoice(gi, ci, { icon: e.target.value })} />
-                      </Field>
-                    )}
-                    <Field label="Choice name" className="min-w-0 flex-1">
-                      <input className={box} value={c.name} maxLength={60}
-                        placeholder={g.layout === 'grid' ? 'Regular' : g.layout === 'cards' ? 'Margherita Classica' : 'Thin crust'}
-                        onChange={(e) => upChoice(gi, ci, { name: e.target.value })} />
-                    </Field>
-                    <Field label="Extra price" className="w-24 flex-none">
-                      <input type="number" step="0.5" inputMode="decimal" className={box} value={c.price} placeholder="0"
-                        onChange={(e) => upChoice(gi, ci, { price: e.target.value })} />
-                    </Field>
-                  </div>
-
-                  {g.layout === 'grid' && (
-                    <Field label="Sub-label (optional)">
-                      <input className={box} value={c.sub} maxLength={60} placeholder={'7" • Serves 1'}
-                        onChange={(e) => upChoice(gi, ci, { sub: e.target.value })} />
-                    </Field>
-                  )}
-                  {g.layout === 'cards' && (
-                    <Field label="Description (optional)">
-                      <input className={box} value={c.desc} maxLength={160} placeholder="Tomato, basil, fresh mozzarella"
-                        onChange={(e) => upChoice(gi, ci, { desc: e.target.value })} />
-                    </Field>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    {g.layout === 'cards' ? (
-                      <Segmented ariaLabel="Veg or non-veg" value={c.diet} onChange={(v) => upChoice(gi, ci, { diet: v })}
-                        options={[{ value: 'veg', label: 'Veg' }, { value: 'non-veg', label: 'Non-veg' }]} />
-                    ) : (
-                      <span />
-                    )}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <label className="mr-1 flex items-center gap-2 text-xs font-semibold text-muted">
-                        <Switch size="sm" checked={c.available} onChange={(v) => upChoice(gi, ci, { available: v })} label="Choice available" />
-                        {c.available ? 'On' : 'Off'}
-                      </label>
-                      <button type="button" aria-label="Move choice up" disabled={ci === 0} className={tiny}
-                        onClick={() => upChoices(gi, (cs) => move(cs, ci, -1))}>↑</button>
-                      <button type="button" aria-label="Move choice down" disabled={ci === g.choices.length - 1} className={tiny}
-                        onClick={() => upChoices(gi, (cs) => move(cs, ci, 1))}>↓</button>
-                      <button type="button" aria-label="Remove choice" className={`${tiny} text-red-600`}
-                        onClick={() => upChoices(gi, (cs) => cs.filter((_, j) => j !== ci))}>Remove</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <button type="button" className={tiny}
-                onClick={() => upChoices(gi, (cs) => [...cs, newChoice('', g.layout === 'cards' ? '0' : '')])}>
-                + Add choice
-              </button>
-            </div>
-          </fieldset>
-        );
-      })}
-
-      {skipped.length > 0 && (
-        <p role="status" className="text-xs font-semibold text-accent">
-          {skipped.map((g) => `"${g.label || 'Untitled'}"`).join(', ')} has no named choices yet, so it will not be saved.
-        </p>
-      )}
-
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-muted">
-          {model.groups.length ? 'Add another group' : 'Start with a group'}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {TEMPLATES.map((t) => (
-            <button key={t.id} type="button" className={tiny} onClick={() => setGroups([...model.groups, t.make()])}>
-              + {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {range && (
-        <p className="rounded-md bg-chip p-2 text-xs">
-          Customers will pay <strong>{money(range.lo)}</strong>
-          {range.hi !== range.lo && <> to <strong>{money(range.hi)}</strong></>} (dish price plus the selected choices).
-        </p>
-      )}
     </div>
   );
 }

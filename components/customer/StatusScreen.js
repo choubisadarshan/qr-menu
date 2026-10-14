@@ -47,7 +47,7 @@ function OrderCard({ o }) {
       {o.note && <p className="mb-3 rounded-tile bg-chip p-2 text-sm text-muted">Note: {o.note}</p>}
 
       <div className="flex items-center justify-between border-t border-line pt-3">
-        <span className="font-display text-lg font-bold tabular-nums">{money(o.total)}</span>
+        <span className="font-sans text-lg font-bold tabular-nums">{money(o.total)}</span>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-chip text-accent'}`}>
           {o.payment_status === 'paid' ? 'Paid' : 'Pay at counter'}
         </span>
@@ -112,7 +112,7 @@ export default function StatusScreen({
             <section className="mb-4 rounded-card border border-line bg-card p-4 shadow-card">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted">Total to pay at counter</span>
-                <span className="font-display text-2xl font-bold tabular-nums text-accent">{money(toPay)}</span>
+                <span className="font-sans text-2xl font-bold tabular-nums text-accent">{money(toPay)}</span>
               </div>
               <p className="mt-1 text-sm text-muted">
                 {toPay > 0

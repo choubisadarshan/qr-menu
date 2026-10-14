@@ -217,8 +217,8 @@ export default function OwnerOrders() {
           value={money(notCollected)}
           sub={`${unpaidOrders.length} unpaid order${unpaidOrders.length === 1 ? '' : 's'}`}
         />
-        <StatCard align="left" label="New orders" value={received.length} sub="Waiting to be accepted" />
-        <StatCard align="left" label="Completed orders" value={completed.length} sub="Finished orders" />
+        <MoneyStat label="New orders" value={received.length} sub="Waiting to be accepted" />
+        <MoneyStat label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -272,7 +272,7 @@ export default function OwnerOrders() {
           <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-line bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 text-xl font-bold">
-                {tableLabel(o.table_number)} <span className="text-sm font-normal text-muted">#{o.id}</span>
+                {tableLabel(o.table_number)} <span className="tabular-nums text-sm font-normal text-muted">#{o.id}</span>
               </div>
               <StatusPill status={o.status} />
             </div>
@@ -282,8 +282,8 @@ export default function OwnerOrders() {
               {o.order_items.map((i) => (
                 <li key={i.id} className="py-1.5">
                   <div className="flex justify-between gap-3">
-                    <span>{i.quantity} × {i.item_name}</span>
-                    <span className="text-muted">{money(i.price * i.quantity)}</span>
+                    <span><span className="tabular-nums">{i.quantity}</span> × {i.item_name}</span>
+                    <span className="tabular-nums text-muted">{money(i.price * i.quantity)}</span>
                   </div>
                   {i.options_text && <div className="text-xs text-muted">{i.options_text}</div>}
                   {i.note && <div className="text-xs font-semibold text-accent">Note: {i.note}</div>}

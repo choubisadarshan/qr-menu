@@ -123,10 +123,10 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
             </span>
             <div className="flex items-center rounded-md bg-chip p-1">
               <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md bg-card text-lg font-semibold">−</button>
-              <span className="min-w-8 text-center font-semibold">{l.quantity}</span>
+              <span className="min-w-8 text-center font-semibold tabular-nums">{l.quantity}</span>
               <button onClick={() => qty(i, 1)} aria-label={`Add one ${l.name}`} className="h-8 w-8 rounded-md bg-accent text-lg font-semibold text-on-accent">+</button>
             </div>
-            <span className="w-20 text-right">{money(l.price * l.quantity)}</span>
+            <span className="w-20 text-right tabular-nums">{money(l.price * l.quantity)}</span>
           </div>
         ))}
 
@@ -145,7 +145,7 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
 
         <div className="mt-4 flex justify-between border-t border-line pt-3 text-lg font-semibold">
           <span>Total (incl. tax)</span>
-          <span className="text-accent">{money(total)}</span>
+          <span className="tabular-nums text-accent">{money(total)}</span>
         </div>
 
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}

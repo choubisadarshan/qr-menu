@@ -7,7 +7,7 @@ import { PRESETS, rangeFor, eachDay, dayCount, toInputDate } from '@/lib/ranges'
 import Dropdown from '@/components/Dropdown';
 import { PageHeader, Icon } from '@/components/owner/ui';
 import { isTakeaway } from '@/lib/orderType';
-import { Panel, Kpi, ColumnChart, BarList, compactMoney } from '@/components/AnalyticsParts';
+import { Panel, Kpi, ColumnChart, BarList } from '@/components/AnalyticsParts';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const hourShort = (h) => `${h % 12 || 12}${h < 12 ? 'a' : 'p'}`;
@@ -288,7 +288,7 @@ export default function OwnerAnalytics() {
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
                       <Icon name="clock" size={14} /> Busiest hour
                     </div>
-                    <div className="mt-3 font-display text-4xl font-semibold">
+                    <div className="mt-3 font-sans text-4xl font-bold tabular-nums">
                       {busiest?.orders > 0 ? hourLong(busiest.hour) : '–'}
                     </div>
                     {busiest?.orders > 0 && <div className="text-sm opacity-80">to {hourLong(busyTo)}</div>}
@@ -296,7 +296,7 @@ export default function OwnerAnalytics() {
                   <div className="mt-5 text-sm">
                     {busiest?.orders > 0 ? (
                       <>
-                        <strong>{busiest.orders}</strong> orders and <strong>{money(busiest.sales)}</strong> came in during this hour. A good time to have an extra pair of hands.
+                        <strong className="tabular-nums">{busiest.orders}</strong> orders and <strong className="tabular-nums">{money(busiest.sales)}</strong> came in during this hour. A good time to have an extra pair of hands.
                       </>
                     ) : (
                       'Not enough orders yet to find your rush hour.'
@@ -485,14 +485,14 @@ export default function OwnerAnalytics() {
                   <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <div className="text-muted">Collected</div>
-                      <div className="text-lg font-semibold text-ok">{money(t.collected)}</div>
+                      <div className="text-lg font-semibold tabular-nums text-ok">{money(t.collected)}</div>
                     </div>
                     <div>
                       <div className="text-muted">Still to collect</div>
-                      <div className="text-lg font-semibold">{money(t.pending)}</div>
+                      <div className="text-lg font-semibold tabular-nums text-warn">{money(t.pending)}</div>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted">Sales {money(t.sales)} across {t.orders} orders. Compact: {compactMoney(t.sales)}.</p>
+                  <p className="mt-2 text-xs text-muted">Sales of <span className="tabular-nums">{money(t.sales)}</span> across <span className="tabular-nums">{t.orders}</span> orders.</p>
                 </Panel>
               </div>
             </>

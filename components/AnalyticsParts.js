@@ -29,7 +29,7 @@ export function Kpi({ label, value, delta, sub }) {
   return (
     <div className="min-w-0 rounded-2xl border border-line bg-card p-4 shadow-card">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 truncate font-display text-2xl font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 truncate font-sans text-2xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1 min-h-4 text-xs">
         {delta != null ? (
           <span className={delta >= 0 ? 'text-ok' : 'text-red-500'}>

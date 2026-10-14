@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { money } from '@/lib/config';
+import { CONFIG, money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
 import { normalizeOptions } from '@/lib/options';
-import OptionsEditor from '@/components/OptionsEditor';
+import OptionsEditor, { countGroups } from '@/components/OptionsEditor';
 import { PageHeader, StatCard, SearchBox, Switch, Icon } from '@/components/owner/ui';
 
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
@@ -45,6 +45,9 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState('details'); // 'details' | 'custom'
+  const [preview, setPreview] = useState(false); // customer preview (inside the Customizations tab)
+  const [newCat, setNewCat] = useState(false);
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const flag = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.checked }));
@@ -67,6 +70,8 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   async function save() {
     const price = Number(f.price);
     if (!f.name.trim() || !f.category.trim() || f.price === '' || Number.isNaN(price) || price < 0) {
+      setTab('details');
+      setPreview(false);
       return setError('Name, category and a valid price are required.');
     }
     let options = null;
@@ -74,9 +79,13 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
       try {
         options = JSON.parse(f.options);
       } catch {
-        return setError('Customization options: this is not valid JSON.');
+        setTab('custom');
+        setPreview(false);
+        return setError('The dish choices could not be saved. Please check them and try again.');
       }
       if (!normalizeOptions(options)) {
+        setTab('custom');
+        setPreview(false);
         return setError('Customization options: add at least one group with a named choice (or clear the options for a normal dish).');
       }
     }
@@ -105,6 +114,18 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
     onSaved();
   }
 
+  const groupCount = countGroups(f.options);
+  const priceOk = f.price !== '' && Number.isFinite(Number(f.price));
+  const catIsNew = newCat || (f.category !== '' && !categories.includes(f.category)) || categories.length === 0;
+  const fieldBox = 'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
+  const eyebrow = 'text-[10px] font-semibold uppercase tracking-[0.18em] text-muted';
+  const showPreview = tab === 'custom' && preview;
+
+  function openTab(t) {
+    setTab(t);
+    setPreview(false);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end"
@@ -112,21 +133,17 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
       aria-modal="true"
       aria-label={f.id ? 'Edit dish' : 'Add dish'}
     >
-      {/* Mobile: full-width bottom sheet. Desktop: side panel. */}
-      <div className="flex max-h-[94vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-card shadow-sheet lg:max-h-none lg:max-w-xl lg:rounded-none lg:rounded-l-3xl">
+      {/* Mobile: full-width bottom sheet. Desktop: wide side panel. */}
+      <div className="flex h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-card shadow-sheet lg:h-auto lg:max-w-5xl lg:rounded-none lg:rounded-l-3xl">
         <div className="flex justify-center pt-2 lg:hidden">
           <span className="h-1.5 w-10 rounded-full bg-line" />
         </div>
-        <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3 lg:px-6 lg:pt-5">
-          <h2 className="text-xl font-semibold">{f.id ? 'Edit dish' : 'Add item'}</h2>
-          <button type="button" onClick={onCancel} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-lg bg-chip">
-            <Icon name="close" size={16} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 pb-4 lg:px-6">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-lg border border-line bg-chip text-4xl">
+
+        {/* ---------- Header ---------- */}
+        <div className="px-4 pt-3 lg:px-8 lg:pt-6">
+          <p className={eyebrow}>Menu / {f.id ? 'Edit dish' : 'Add dish'}</p>
+          <div className="mt-3 flex items-center gap-3 sm:gap-4">
+            <div className="grid h-14 w-14 flex-none place-items-center overflow-hidden rounded-xl border border-line bg-chip text-3xl sm:h-16 sm:w-16">
               {f.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={f.image_url} alt="" className="h-full w-full object-cover" />
@@ -134,92 +151,210 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                 <span aria-hidden="true">{f.emoji || '🍽️'}</span>
               )}
             </div>
-            <div className="flex flex-col items-start gap-2">
-              <label className="cursor-pointer rounded-md bg-chip px-4 py-2 text-sm font-semibold focus-within:ring-2 focus-within:ring-accent">
-                {uploading ? 'Uploading…' : f.image_url ? 'Change photo' : 'Add photo'}
-                <input type="file" accept="image/*" onChange={onPhoto} disabled={uploading} className="sr-only" />
-              </label>
-              {f.image_url && (
-                <button type="button" onClick={() => setF((p) => ({ ...p, image_url: '' }))} className="text-sm font-semibold text-red-600">
-                  Remove photo
-                </button>
-              )}
+            <div className="min-w-0 flex-1">
+              <div role="heading" aria-level={2} className="truncate text-xl font-semibold sm:text-2xl">
+                {f.name.trim() || (f.id ? 'Untitled dish' : 'New dish')}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${f.is_veg ? 'bg-ok' : 'bg-nonveg'}`} />
+                <span>{f.category.trim() || 'No category'}</span>
+                {priceOk && (
+                  <>
+                    <span aria-hidden="true">/</span>
+                    <span className="tabular-nums">{money(f.price)} base price</span>
+                  </>
+                )}
+              </div>
             </div>
+            <button type="button" onClick={onCancel} aria-label="Close" className="grid h-9 w-9 flex-none place-items-center rounded-lg text-muted hover:bg-chip hover:text-ink">
+              <Icon name="close" size={18} />
+            </button>
           </div>
-          <div>
-            <label htmlFor="m-name" className="mb-1 block text-sm font-medium">Name</label>
-            <input id="m-name" className={input} value={f.name} onChange={set('name')} maxLength={60} />
+
+          <div className="mt-4 flex items-end justify-between gap-3 border-b border-line">
+            <div role="tablist" aria-label="Dish editor sections" className="flex gap-5 sm:gap-6">
+              <button
+                role="tab"
+                aria-selected={tab === 'details'}
+                onClick={() => openTab('details')}
+                className={`-mb-px border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'details' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
+              >
+                Dish details
+              </button>
+              <button
+                role="tab"
+                aria-selected={tab === 'custom'}
+                onClick={() => openTab('custom')}
+                className={`-mb-px flex items-center gap-2 border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'custom' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
+              >
+                Customizations
+                <span className="rounded bg-okbg px-1.5 text-xs tabular-nums text-ok">{groupCount}</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('custom');
+                setPreview(!showPreview);
+              }}
+              className="mb-2 inline-flex flex-none items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-chip"
+            >
+              <Icon name="eye" size={16} />
+              <span className="hidden sm:inline">{showPreview ? 'Back to editor' : 'Customer preview'}</span>
+              <span className="sm:hidden">{showPreview ? 'Editor' : 'Preview'}</span>
+            </button>
           </div>
-          <div>
-            <label htmlFor="m-desc" className="mb-1 block text-sm font-medium">Description</label>
-            <input id="m-desc" className={input} value={f.description} onChange={set('description')} maxLength={120} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="m-price" className="mb-1 block text-sm font-medium">Price</label>
-              <input id="m-price" type="number" min="0" step="0.5" inputMode="decimal" className={input} value={f.price} onChange={set('price')} />
-            </div>
-            <div>
-              <label htmlFor="m-cat" className="mb-1 block text-sm font-medium">Category</label>
-              <input id="m-cat" className={input} value={f.category} onChange={set('category')} maxLength={30} />
-            </div>
-            <div>
-              <label htmlFor="m-tag" className="mb-1 block text-sm font-medium">Tag (optional)</label>
-              <input id="m-tag" className={input} value={f.tag} onChange={set('tag')} maxLength={20} placeholder="Popular" />
-            </div>
-            <div>
-              <label htmlFor="m-emoji" className="mb-1 block text-sm font-medium">Emoji</label>
-              <input id="m-emoji" className={input} value={f.emoji} onChange={set('emoji')} maxLength={8} />
+        </div>
+
+        {/* ---------- Body (scrolls) ---------- */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Tab 1: Dish details */}
+          <div hidden={tab !== 'details'} className="px-4 py-6 lg:px-8 lg:py-8">
+            <div className="max-w-xl">
+              <p className={eyebrow}>The essentials</p>
+              <div role="heading" aria-level={3} className="mt-3 text-3xl font-semibold">Dish details</div>
+
+              <div className="mt-8 space-y-6">
+                <div>
+                  <label htmlFor="m-name" className="mb-2 block text-sm font-medium">Dish name</label>
+                  <input id="m-name" className={fieldBox} value={f.name} onChange={set('name')} maxLength={60} />
+                </div>
+                <div>
+                  <label htmlFor="m-desc" className="mb-2 block text-sm font-medium">Description</label>
+                  <textarea id="m-desc" rows={3} className={`${fieldBox} resize-y`} value={f.description} onChange={set('description')} maxLength={120} />
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="m-price" className="mb-2 block text-sm font-medium">Base price ({CONFIG.currency})</label>
+                    <input id="m-price" type="number" min="0" step="0.5" inputMode="decimal" className={`${fieldBox} tabular-nums`} value={f.price} onChange={set('price')} />
+                  </div>
+                  <div>
+                    <label htmlFor="m-cat" className="mb-2 block text-sm font-medium">Category</label>
+                    {categories.length > 0 && (
+                      <select
+                        id="m-cat"
+                        className={fieldBox}
+                        value={catIsNew ? '__new' : f.category}
+                        onChange={(e) => {
+                          if (e.target.value === '__new') {
+                            setNewCat(true);
+                            setF((p) => ({ ...p, category: '' }));
+                          } else {
+                            setNewCat(false);
+                            setF((p) => ({ ...p, category: e.target.value }));
+                          }
+                        }}
+                      >
+                        <option value="" disabled>Select a category</option>
+                        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        <option value="__new">+ New category…</option>
+                      </select>
+                    )}
+                    {catIsNew && (
+                      <input
+                        id={categories.length ? 'm-cat-new' : 'm-cat'}
+                        aria-label="New category name"
+                        className={`${fieldBox} ${categories.length ? 'mt-2' : ''}`}
+                        value={f.category}
+                        onChange={set('category')}
+                        maxLength={30}
+                        placeholder="New category name"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1 border-t border-line pt-2">
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <span className="text-sm font-medium">Available to order</span>
+                    <Switch checked={f.available} onChange={(v) => setF((p) => ({ ...p, available: v }))} label="Available to order" />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 border-t border-line py-3">
+                    <span className="text-sm font-medium">Vegetarian</span>
+                    <Switch checked={f.is_veg} onChange={(v) => setF((p) => ({ ...p, is_veg: v }))} label="Vegetarian" />
+                  </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="m-tag" className="mb-2 block text-sm font-medium">Tag (optional)</label>
+                    <input id="m-tag" className={fieldBox} value={f.tag} onChange={set('tag')} maxLength={20} placeholder="Popular" />
+                  </div>
+                  <div>
+                    <label htmlFor="m-emoji" className="mb-2 block text-sm font-medium">Emoji</label>
+                    <input id="m-emoji" className={fieldBox} value={f.emoji} onChange={set('emoji')} maxLength={8} />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="mb-2 block text-sm font-medium">Photo</span>
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-xl border border-line bg-chip text-4xl">
+                      {f.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={f.image_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span aria-hidden="true">{f.emoji || '🍽️'}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start gap-2">
+                      <label className="cursor-pointer rounded-lg border border-line bg-card px-4 py-2 text-sm font-medium shadow-card focus-within:ring-2 focus-within:ring-accent hover:bg-chip">
+                        {uploading ? 'Uploading…' : f.image_url ? 'Change photo' : 'Add photo'}
+                        <input type="file" accept="image/*" onChange={onPhoto} disabled={uploading} className="sr-only" />
+                      </label>
+                      {f.image_url && (
+                        <button type="button" onClick={() => setF((p) => ({ ...p, image_url: '' }))} className="text-sm font-semibold text-red-600">
+                          Remove photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-1.5" aria-label="Existing categories">
-              {categories.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  onClick={() => setF((p) => ({ ...p, category: c }))}
-                  className="rounded-md bg-chip px-3 py-1 text-xs font-semibold"
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={f.is_veg} onChange={flag('is_veg')} />
-            Vegetarian
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={f.available} onChange={flag('available')} />
-            Available to order
-          </label>
-          <details className="rounded-md border border-line p-3" open={!!initial.options.trim()}>
-            <summary className="cursor-pointer text-sm font-semibold">
-              Customization options{f.options.trim() ? ' · set' : ''}
-            </summary>
+          {/* Tab 2: Customizations (kept mounted so nothing is lost when switching tabs) */}
+          <div hidden={tab !== 'custom'} className="min-h-full">
             <OptionsEditor
               value={f.options}
               onChange={(v) => setF((p) => ({ ...p, options: v }))}
               basePrice={f.price}
+              preview={showPreview}
+              dish={{ name: f.name, category: f.category, image_url: f.image_url, emoji: f.emoji }}
             />
-          </details>
+          </div>
         </div>
 
-          {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
-        </div>
-        <div className="safe-bottom flex items-center gap-2 border-t border-line px-4 pt-3 lg:px-6">
-          {f.id && onDelete && (
-            <button type="button" onClick={() => onDelete(f)} className="rounded-xl px-3 py-3 text-sm font-semibold text-red-600 hover:bg-chip">
-              Delete
+        {error && <p role="alert" className="border-t border-line bg-warnbg px-4 py-2.5 text-sm font-medium text-red-600 lg:px-8">{error}</p>}
+
+        {/* ---------- Footer ---------- */}
+        <div className="safe-bottom flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line px-4 pt-3 lg:px-8">
+          <p className="flex w-full items-center gap-2 text-xs text-muted sm:mr-auto sm:w-auto">
+            <span aria-hidden="true" className="h-1.5 w-1.5 flex-none rounded-full bg-ok" />
+            <span>
+              Base price <strong className="tabular-nums text-ink">{priceOk ? money(f.price) : '—'}</strong> · Extra prices added to each choice
+            </span>
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            {tab === 'details' && f.id && onDelete && (
+              <button type="button" onClick={() => onDelete(f)} aria-label="Delete dish" className="grid h-11 w-11 place-items-center rounded-lg text-muted hover:bg-chip hover:text-red-600">
+                <Icon name="trash" size={18} />
+              </button>
+            )}
+            <button type="button" onClick={onCancel} className="rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-medium shadow-card hover:bg-chip">
+              Cancel
             </button>
-          )}
-          <button onClick={onCancel} className="ml-auto rounded-xl bg-chip px-5 py-3 font-semibold">Cancel</button>
-          <button onClick={save} disabled={busy || uploading} className="rounded-xl bg-accent px-6 py-3 font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60">
-            {busy ? 'Saving…' : 'Save dish'}
-          </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy || uploading}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent shadow-card hover:bg-accent-hover disabled:opacity-60"
+            >
+              <Icon name="save" size={16} />
+              {busy ? 'Saving…' : 'Save dish'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

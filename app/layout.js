@@ -3,8 +3,8 @@ import ThemeSync from '@/components/ThemeSync';
 import { CONFIG } from '@/lib/config';
 import './globals.css';
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
-const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'latin-ext'], variable: '--font-jakarta' });
+const playfair = Playfair_Display({ subsets: ['latin', 'latin-ext'], variable: '--font-playfair' });
 
 export const metadata = {
   title: { default: `${CONFIG.name} · Scan & Order`, template: `%s · ${CONFIG.name}` },

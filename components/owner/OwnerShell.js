@@ -23,7 +23,7 @@ const readCollapsed = () => {
 function Logo({ compact }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#1B5E3B] text-white">
+      <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-accent text-on-accent">
         <Icon name="coffee" size={20} />
       </span>
       {!compact && (

@@ -74,24 +74,6 @@
   }
 }
 
-/* Upright rupee sign. The web fonts (Plus Jakarta Sans, Playfair Display) are Latin-only, so the browser used to pick
-   a slanted fallback glyph for ₹. This maps ONLY U+20B9 to a clean upright system font; every other character is untouched. */
-@font-face {
-  font-family: 'Rupee';
-  font-style: normal;
-  font-weight: 100 600;
-  src: local('Noto Sans'), local('NotoSans-Regular'), local('Roboto'), local('Segoe UI'), local('Arial'), local('Helvetica Neue'), local('Helvetica');
-  unicode-range: U+20B9;
-}
-
-@font-face {
-  font-family: 'Rupee';
-  font-style: normal;
-  font-weight: 700 900;
-  src: local('Noto Sans Bold'), local('NotoSans-Bold'), local('Roboto Bold'), local('Roboto-Bold'), local('Segoe UI Bold'), local('SegoeUI-Bold'), local('Arial Bold'), local('Arial-BoldMT'), local('Helvetica Neue Bold'), local('Helvetica-Bold');
-  unicode-range: U+20B9;
-}
-
 /* Staff screens (kitchen, owner) keep tight corners; the customer menu uses the rounder design shapes below */
 @theme {
   --radius-xs: 2px;
@@ -132,8 +114,8 @@
   --color-gold: var(--gold);
   --color-warn: var(--warn);
   --color-warnbg: var(--warnbg);
-  --font-sans: 'Rupee', var(--font-jakarta), system-ui, sans-serif;
-  --font-display: 'Rupee', var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
 }
 
 body {
@@ -141,12 +123,11 @@ body {
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  font-synthesis: none;
 }
 
 h1,
 h2 {
-  font-family: 'Rupee', var(--font-playfair), Georgia, serif;
+  font-family: var(--font-playfair), Georgia, serif;
   letter-spacing: -0.01em;
 }
 

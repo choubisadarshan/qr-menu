@@ -184,8 +184,12 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
     setAdding(false);
   }
 
+  // Note: read the group from model.groups here (not from `g`). `g` is undefined for a dish with no groups yet,
+  // and React Compiler reads anything a closure uses while rendering, which crashed the whole Edit dish panel.
   function removeGroup() {
-    if (g.choices.some((c) => c.name.trim()) && !window.confirm(`Delete the group "${g.label || 'Untitled group'}" and all its choices?`)) return;
+    const cur = model.groups[gi];
+    if (!cur) return;
+    if (cur.choices.some((c) => c.name.trim()) && !window.confirm(`Delete the group "${cur.label || 'Untitled group'}" and all its choices?`)) return;
     const next = model.groups.filter((_, i) => i !== gi);
     setGroups(next);
     setSelK(next[Math.max(0, gi - 1)]?._k ?? null);

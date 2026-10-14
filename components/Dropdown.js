@@ -38,14 +38,16 @@ export default function Dropdown({
 
   function openMenu() {
     const r = btnRef.current.getBoundingClientRect();
-    const vw = window.innerWidth;
+    // Use the visible page width (not window.innerWidth, which can be wider on phones) so the menu is never cut off
+    const vw = document.documentElement.clientWidth;
     const vh = window.innerHeight;
-    const minW = Math.max(r.width, 176);
+    const minW = Math.min(Math.max(r.width, 176), vw - 16);
     const below = vh - r.bottom;
     const up = below < 220 && r.top > below;
     const s = { minWidth: minW, maxWidth: vw - 16, maxHeight: Math.max(120, (up ? r.top : below) - 16) };
-    if (align === 'right') s.right = Math.max(8, vw - r.right);
-    else s.left = Math.max(8, Math.min(r.left, vw - minW - 8));
+    // Line up with the chosen edge of the button, then keep the whole menu on screen
+    const wanted = align === 'right' ? r.right - minW : r.left;
+    s.left = Math.max(8, Math.min(wanted, vw - minW - 8));
     if (up) s.bottom = vh - r.top + 6;
     else s.top = r.bottom + 6;
     setStyle(s);

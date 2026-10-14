@@ -5,6 +5,7 @@ import { CONFIG, money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
 import { normalizeOptions } from '@/lib/options';
 import OptionsEditor, { countGroups } from '@/components/OptionsEditor';
+import { useScrollLock } from '@/lib/useScrollLock';
 import { PageHeader, StatCard, SearchBox, Switch, Icon } from '@/components/owner/ui';
 
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
@@ -45,6 +46,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  useScrollLock(true);
   const [tab, setTab] = useState('details'); // 'details' | 'custom'
   const [preview, setPreview] = useState(false); // customer preview (inside the Customizations tab)
   const [newCat, setNewCat] = useState(false);
@@ -117,7 +119,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   const groupCount = countGroups(f.options);
   const priceOk = f.price !== '' && Number.isFinite(Number(f.price));
   const catIsNew = newCat || (f.category !== '' && !categories.includes(f.category)) || categories.length === 0;
-  const fieldBox = 'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
+  const fieldBox = 'w-full rounded-lg border border-edge bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
   const eyebrow = 'text-[10px] font-semibold uppercase tracking-[0.18em] text-muted';
   const showPreview = tab === 'custom' && preview;
 
@@ -128,13 +130,13 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 lg:items-stretch lg:justify-end"
+      className="scrim anim-scrim fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end"
       role="dialog"
       aria-modal="true"
       aria-label={f.id ? 'Edit dish' : 'Add dish'}
     >
       {/* Mobile: full-width bottom sheet. Desktop: wide side panel. */}
-      <div className="flex h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-card shadow-sheet lg:h-auto lg:max-w-5xl lg:rounded-none lg:rounded-l-3xl">
+      <div className="anim-sheet flex h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-t border-edge bg-card shadow-sheet lg:h-auto lg:max-w-5xl lg:rounded-none lg:rounded-l-3xl lg:border-l lg:border-t-0">
         <div className="flex justify-center pt-2 lg:hidden">
           <span className="h-1.5 w-10 rounded-full bg-line" />
         </div>
@@ -143,7 +145,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
         <div className="px-4 pt-3 lg:px-8 lg:pt-6">
           <p className={eyebrow}>Menu / {f.id ? 'Edit dish' : 'Add dish'}</p>
           <div className="mt-3 flex items-center gap-3 sm:gap-4">
-            <div className="grid h-14 w-14 flex-none place-items-center overflow-hidden rounded-xl border border-line bg-chip text-3xl sm:h-16 sm:w-16">
+            <div className="grid h-14 w-14 flex-none place-items-center overflow-hidden rounded-xl border border-edge bg-chip text-3xl sm:h-16 sm:w-16">
               {f.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={f.image_url} alt="" className="h-full w-full object-cover" />
@@ -171,13 +173,13 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
             </button>
           </div>
 
-          <div className="mt-4 flex items-end justify-between gap-3 border-b border-line">
-            <div role="tablist" aria-label="Dish editor sections" className="flex gap-5 sm:gap-6">
+          <div className="mt-4 flex items-end justify-between gap-3 border-b border-edge">
+            <div role="tablist" aria-label="Dish editor sections" className="flex min-w-0 gap-4 sm:gap-6">
               <button
                 role="tab"
                 aria-selected={tab === 'details'}
                 onClick={() => openTab('details')}
-                className={`-mb-px border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'details' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
+                className={`-mb-px whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'details' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
               >
                 Dish details
               </button>
@@ -185,7 +187,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                 role="tab"
                 aria-selected={tab === 'custom'}
                 onClick={() => openTab('custom')}
-                className={`-mb-px flex items-center gap-2 border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'custom' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
+                className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition-colors ${tab === 'custom' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-ink'}`}
               >
                 Customizations
                 <span className="rounded bg-okbg px-1.5 text-xs tabular-nums text-ok">{groupCount}</span>
@@ -197,17 +199,18 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                 setTab('custom');
                 setPreview(!showPreview);
               }}
-              className="mb-2 inline-flex flex-none items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-chip"
+              aria-label={showPreview ? 'Back to editor' : 'Customer preview'}
+              aria-pressed={showPreview}
+              className={`mb-2 inline-flex h-10 w-10 flex-none items-center justify-center gap-2 rounded-lg border bg-card text-sm font-medium shadow-card hover:bg-chip sm:w-auto sm:px-3 ${showPreview ? 'border-ok text-ok' : 'border-edge'}`}
             >
               <Icon name="eye" size={16} />
               <span className="hidden sm:inline">{showPreview ? 'Back to editor' : 'Customer preview'}</span>
-              <span className="sm:hidden">{showPreview ? 'Editor' : 'Preview'}</span>
             </button>
           </div>
         </div>
 
         {/* ---------- Body (scrolls) ---------- */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {/* Tab 1: Dish details */}
           <div hidden={tab !== 'details'} className="px-4 py-6 lg:px-8 lg:py-8">
             <div className="max-w-xl">
@@ -264,12 +267,12 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                   </div>
                 </div>
 
-                <div className="space-y-1 border-t border-line pt-2">
+                <div className="space-y-1 border-t border-edge pt-2">
                   <div className="flex items-center justify-between gap-4 py-3">
                     <span className="text-sm font-medium">Available to order</span>
                     <Switch checked={f.available} onChange={(v) => setF((p) => ({ ...p, available: v }))} label="Available to order" />
                   </div>
-                  <div className="flex items-center justify-between gap-4 border-t border-line py-3">
+                  <div className="flex items-center justify-between gap-4 border-t border-edge py-3">
                     <span className="text-sm font-medium">Vegetarian</span>
                     <Switch checked={f.is_veg} onChange={(v) => setF((p) => ({ ...p, is_veg: v }))} label="Vegetarian" />
                   </div>
@@ -289,7 +292,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                 <div>
                   <span className="mb-2 block text-sm font-medium">Photo</span>
                   <div className="flex items-center gap-3">
-                    <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-xl border border-line bg-chip text-4xl">
+                    <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-xl border border-edge bg-chip text-4xl">
                       {f.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={f.image_url} alt="" className="h-full w-full object-cover" />
@@ -298,7 +301,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                       )}
                     </div>
                     <div className="flex flex-col items-start gap-2">
-                      <label className="cursor-pointer rounded-lg border border-line bg-card px-4 py-2 text-sm font-medium shadow-card focus-within:ring-2 focus-within:ring-accent hover:bg-chip">
+                      <label className="cursor-pointer rounded-lg border border-edge bg-card px-4 py-2 text-sm font-medium shadow-card focus-within:ring-2 focus-within:ring-accent hover:bg-chip">
                         {uploading ? 'Uploading…' : f.image_url ? 'Change photo' : 'Add photo'}
                         <input type="file" accept="image/*" onChange={onPhoto} disabled={uploading} className="sr-only" />
                       </label>
@@ -326,10 +329,10 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
           </div>
         </div>
 
-        {error && <p role="alert" className="border-t border-line bg-warnbg px-4 py-2.5 text-sm font-medium text-red-600 lg:px-8">{error}</p>}
+        {error && <p role="alert" className="border-t border-edge bg-warnbg px-4 py-2.5 text-sm font-medium text-red-600 lg:px-8">{error}</p>}
 
         {/* ---------- Footer ---------- */}
-        <div className="safe-bottom flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line px-4 pt-3 lg:px-8">
+        <div className="safe-bottom flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-edge px-4 pt-3 lg:px-8">
           <p className="flex w-full items-center gap-2 text-xs text-muted sm:mr-auto sm:w-auto">
             <span aria-hidden="true" className="h-1.5 w-1.5 flex-none rounded-full bg-ok" />
             <span>
@@ -342,7 +345,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
                 <Icon name="trash" size={18} />
               </button>
             )}
-            <button type="button" onClick={onCancel} className="rounded-lg border border-line bg-card px-5 py-2.5 text-sm font-medium shadow-card hover:bg-chip">
+            <button type="button" onClick={onCancel} className="rounded-lg border border-edge bg-card px-5 py-2.5 text-sm font-medium shadow-card hover:bg-chip">
               Cancel
             </button>
             <button

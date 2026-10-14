@@ -11,6 +11,7 @@
   --on-accent: #ffffff;
   --chip: #efece4;
   --line: #e3ddcf;
+  --edge: #cbc3b0; /* stronger border for inputs and cards inside dialogs */
   --ok: #107c41;
   --on-ok: #ffffff;
   --okbg: #ddefe3;
@@ -35,6 +36,7 @@
   --on-accent: #1c0e06;
   --chip: #1d3436;
   --line: #2a4547;
+  --edge: #3f5f61;
   --ok: #5fd38a;
   --on-ok: #0b2410;
   --okbg: #14392a;
@@ -60,6 +62,7 @@
     --on-accent: #1c0e06;
     --chip: #1d3436;
     --line: #2a4547;
+    --edge: #3f5f61;
     --ok: #5fd38a;
     --on-ok: #0b2410;
     --okbg: #14392a;
@@ -104,6 +107,7 @@
   --color-on-accent: var(--on-accent);
   --color-chip: var(--chip);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-ok: var(--ok);
   --color-on-ok: var(--on-ok);
   --color-okbg: var(--okbg);
@@ -116,6 +120,17 @@
   --color-warnbg: var(--warnbg);
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
   --font-display: var(--font-playfair), Georgia, serif;
+}
+
+/* Keep room for the scrollbar always, so the page never shifts sideways when a tab is shorter/longer than the screen */
+html {
+  scrollbar-gutter: stable;
+}
+/* While a dialog or sheet is open, only the dialog scrolls (see lib/useScrollLock.js) */
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -158,6 +173,58 @@ button:not(:disabled) {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
+/* Dialog open animation: dimmed + blurred page behind, the sheet slides up (phone) or in from the right (desktop) */
+.scrim {
+  background: rgba(125, 135, 130, 0.38);
+  background: color-mix(in srgb, color-mix(in srgb, var(--bg) 82%, var(--ink)) 60%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  overscroll-behavior: contain;
+}
+@keyframes scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes panel-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+.anim-scrim {
+  animation: scrim-in 0.28s ease both;
+}
+/* Centered dialog (order form): slides up on phones, fades + scales in on larger screens */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.anim-modal {
+  animation: sheet-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@media (min-width: 640px) {
+  .anim-modal {
+    animation: pop-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+}
+.anim-sheet {
+  animation: sheet-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@media (min-width: 1024px) {
+  .anim-sheet {
+    animation-name: panel-in;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-scrim,
+  .anim-sheet,
+  .anim-modal {
+    animation: none;
+  }
+}
+
 /* Smooth bottom-sheet slide */
 .sheet-transition {
   transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.28s ease;
@@ -174,6 +241,7 @@ button:not(:disabled) {
   --on-accent: #ffffff;
   --chip: #edf2ec;
   --line: #e2e8e0;
+  --edge: #bcc8be;
   --ok: #1b5e3b;
   --on-ok: #ffffff;
   --okbg: #e2f1e7;
@@ -200,6 +268,7 @@ button:not(:disabled) {
   --on-accent: #08170f;
   --chip: #1e2d25;
   --line: #2a3b32;
+  --edge: #3d5546;
   --ok: #5fd38a;
   --on-ok: #08170f;
   --okbg: #173325;

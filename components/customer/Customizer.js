@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { money } from '@/lib/config';
+import { useScrollLock } from '@/lib/useScrollLock';
 import { normalizeOptions, defaultSelection, priceFor, describe } from '@/lib/options';
 import { VegMark, BackArrow, priceDelta } from '@/components/customer/shared';
 
 // The bottom sheet for customizable dishes (pizza size and crust, pasta shape...).
 // Step 1 picks a variety (only if the dish has one), step 2 picks size / crust / notes / quantity.
 export default function Customizer({ item, line, vegOnly, onClose, onConfirm }) {
+  useScrollLock(true);
   const opts = normalizeOptions(item.options);
   const groups = opts?.groups ?? [];
   const stepOne = groups[0]?.layout === 'cards' ? groups[0] : null;

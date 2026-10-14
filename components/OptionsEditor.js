@@ -145,9 +145,11 @@ const reorder = (arr, from, to) => {
 /* ---------- shared classes ---------- */
 
 const eyebrow = 'text-[10px] font-semibold uppercase tracking-[0.18em] text-muted';
-const fieldBox = 'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
+const fieldBox = 'w-full rounded-lg border border-edge bg-card px-3 py-2.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
 const iconBtn = 'grid h-9 w-9 flex-none place-items-center rounded-lg text-muted transition-colors hover:bg-chip hover:text-ink disabled:opacity-35 disabled:hover:bg-transparent';
-const ROW_GRID = 'grid grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_6rem_2.75rem_1.75rem] items-center gap-2 sm:grid-cols-[1.25rem_2.75rem_minmax(0,1fr)_7.5rem_3rem_2rem] sm:gap-3';
+// Phone: row 1 = handle, icon, name, on/off, arrow; row 2 = extra price. From `sm` up it is a single table row.
+const ROW_COLS = 'grid-cols-[1.25rem_2.5rem_minmax(0,1fr)_2.75rem_2rem] gap-x-2 gap-y-2 sm:grid-cols-[1.25rem_2.75rem_minmax(0,1fr)_7.5rem_3rem_2rem] sm:gap-x-3';
+const ROW_GRID = `grid items-center ${ROW_COLS}`;
 
 const priceLabel = (p) => {
   const n = Number(p) || 0;
@@ -204,9 +206,9 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
   if (preview) return <CustomerPreview model={model} dish={dish} />;
 
   return (
-    <div className="grid min-h-full md:grid-cols-[17.5rem_minmax(0,1fr)]">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:grid-cols-[17.5rem_minmax(0,1fr)]">
       {/* ---------- Left: option groups ---------- */}
-      <aside className="border-b border-line bg-chip/40 p-4 md:border-b-0 md:border-r md:p-5">
+      <aside className="min-w-0 border-b border-edge bg-chip p-4 md:border-b-0 md:border-r md:p-5">
         <div className="mb-3 flex items-center justify-between">
           <span className={eyebrow}>Option groups</span>
           <span className="text-xs tabular-nums text-muted">{model.groups.length}</span>
@@ -222,7 +224,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                 onClick={() => setSelK(x._k)}
                 aria-current={active ? 'true' : undefined}
                 className={`flex w-52 flex-none items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors md:w-auto ${
-                  active ? 'border-ok/40 bg-okbg' : 'border-transparent hover:bg-chip'
+                  active ? 'border-ok bg-okbg' : 'border-edge bg-card shadow-card hover:bg-bg'
                 }`}
               >
                 <span className="text-xs tabular-nums text-muted">{String(i + 1).padStart(2, '0')}</span>
@@ -243,12 +245,12 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
             type="button"
             onClick={() => setAdding((v) => !v)}
             aria-expanded={adding}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-card/60 py-3 text-sm font-medium transition-colors hover:bg-card"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-edge bg-card py-3 text-sm font-medium transition-colors hover:bg-card"
           >
             <Icon name="plus" size={16} /> Add option group
           </button>
           {adding && (
-            <div className="mt-2 space-y-1 rounded-xl border border-line bg-card p-1.5 shadow-card">
+            <div className="mt-2 space-y-1 rounded-xl border border-edge bg-card p-1.5 shadow-card">
               {TEMPLATES.map((t) => (
                 <button key={t.id} type="button" onClick={() => addGroup(t)} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-chip">
                   {t.label}
@@ -263,7 +265,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
           {totalChoices} choice{totalChoices === 1 ? '' : 's'} across {model.groups.length} group{model.groups.length === 1 ? '' : 's'}
         </p>
 
-        <div className="mt-5 hidden border-t border-line pt-5 md:block">
+        <div className="mt-5 hidden border-t border-edge pt-5 md:block">
           <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl bg-chip text-5xl">
             {dish.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -293,7 +295,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {TEMPLATES.map((t) => (
-                <button key={t.id} type="button" onClick={() => addGroup(t)} className="rounded-lg border border-line bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-chip">
+                <button key={t.id} type="button" onClick={() => addGroup(t)} className="rounded-lg border border-edge bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-chip">
                   + {t.label}
                 </button>
               ))}
@@ -337,13 +339,13 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
               </div>
             </div>
 
-            <div className="mt-7 border-t border-line pt-6">
+            <div className="mt-7 border-t border-edge pt-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-baseline gap-2">
                   <span className="text-base font-semibold">Choices</span>
                   <span className="text-xs tabular-nums text-muted">{g.choices.length}</span>
                 </div>
-                <div role="group" aria-label="Layout" className="inline-flex rounded-lg border border-line bg-card p-0.5">
+                <div role="group" aria-label="Layout" className="inline-flex rounded-lg border border-edge bg-card p-0.5">
                   {LAYOUTS.map((l) => (
                     <button
                       key={l.value}
@@ -358,7 +360,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                 </div>
               </div>
 
-              <div className={`${ROW_GRID} mt-5 px-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted`}>
+              <div className={`hidden sm:grid ${ROW_COLS} mt-5 items-center px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted`}>
                 <span className="col-span-2" />
                 <span>Choice name</span>
                 <span>Extra price</span>
@@ -366,14 +368,14 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                 <span />
               </div>
 
-              <ul className="mt-2 border-t border-line">
+              <ul className="mt-3">
                 {g.choices.map((c, ci) => {
                   const isOpen = !!open[c._k];
                   return (
                     <li
                       key={c._k}
                       data-row
-                      className="border-b border-line"
+                      className="mb-2.5 rounded-xl border border-edge bg-card px-3 shadow-card"
                       onDragOver={(e) => dragFrom.current !== null && e.preventDefault()}
                       onDrop={() => {
                         const from = dragFrom.current;
@@ -399,7 +401,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                         </span>
                         <input
                           aria-label="Choice icon (emoji)"
-                          className="h-10 w-full rounded-lg bg-okbg/70 text-center text-xl outline-none placeholder:text-muted/50 focus:ring-2 focus:ring-accent/40 sm:h-11"
+                          className="h-10 w-full rounded-lg border border-ok/25 bg-okbg text-center text-xl outline-none placeholder:text-muted/50 focus:ring-2 focus:ring-accent/40 sm:h-11"
                           value={c.icon}
                           maxLength={8}
                           placeholder="🙂"
@@ -413,18 +415,21 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                           placeholder={g.layout === 'grid' ? 'Regular' : g.layout === 'cards' ? 'Classic Margherita' : 'Hand-tossed'}
                           onChange={(e) => upChoice(gi, ci, { name: e.target.value })}
                         />
-                        <div className="relative">
-                          <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted">{CONFIG.currency}</span>
-                          <input
-                            aria-label="Extra price"
-                            type="number"
-                            step="0.5"
-                            inputMode="decimal"
-                            className="w-full rounded-lg border border-line bg-card py-2 pl-6 pr-1.5 text-base tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm"
-                            value={c.price}
-                            placeholder="0"
-                            onChange={(e) => upChoice(gi, ci, { price: e.target.value })}
-                          />
+                        <div className="col-span-3 col-start-3 row-start-2 flex items-center gap-2 sm:col-span-1 sm:col-start-auto sm:row-start-auto">
+                          <span className="text-xs text-muted sm:hidden">Extra price</span>
+                          <div className="relative w-32 sm:w-full">
+                            <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted">{CONFIG.currency}</span>
+                            <input
+                              aria-label="Extra price"
+                              type="number"
+                              step="0.5"
+                              inputMode="decimal"
+                              className="w-full rounded-lg border border-edge bg-card py-2 pl-6 pr-1.5 text-base tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm"
+                              value={c.price}
+                              placeholder="0"
+                              onChange={(e) => upChoice(gi, ci, { price: e.target.value })}
+                            />
+                          </div>
                         </div>
                         <Switch checked={c.available} onChange={(v) => upChoice(gi, ci, { available: v })} label={`Show ${c.name || 'this choice'} to customers`} />
                         <button
@@ -439,7 +444,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                       </div>
 
                       {isOpen && (
-                        <div className="mb-3 ml-0 space-y-3 rounded-xl bg-chip/50 p-3 sm:ml-8">
+                        <div className="mb-3 ml-0 space-y-3 rounded-xl border border-edge bg-chip p-3 sm:ml-8">
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
                               <label className="mb-1 block text-xs font-medium text-muted">Small note under the name (tiles)</label>
@@ -451,7 +456,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div role="group" aria-label="Veg or non-veg" className="inline-flex rounded-lg border border-line bg-card p-0.5">
+                            <div role="group" aria-label="Veg or non-veg" className="inline-flex rounded-lg border border-edge bg-card p-0.5">
                               {[['veg', 'Veg'], ['non-veg', 'Non-veg']].map(([v, label]) => (
                                 <button key={v} type="button" aria-pressed={c.diet === v} onClick={() => upChoice(gi, ci, { diet: v })}
                                   className={`rounded-md px-3 py-1.5 text-xs font-medium ${c.diet === v ? 'bg-okbg text-ok' : 'text-muted'}`}>
@@ -477,13 +482,13 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
               <button
                 type="button"
                 onClick={() => upChoices(gi, (cs) => [...cs, newChoice('', '')])}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-card px-4 py-2.5 text-sm font-medium shadow-card hover:bg-chip"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-edge bg-card px-4 py-2.5 text-sm font-medium shadow-card hover:bg-chip"
               >
                 <Icon name="plus" size={16} /> Add choice
               </button>
             </div>
 
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4 text-xs text-muted">
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-edge pt-4 text-xs text-muted">
               <span className="flex flex-wrap items-center gap-x-2">
                 <Icon name="eye" size={16} className="mr-1" />
                 {LAYOUTS.find((l) => l.value === g.layout).label} view <span>·</span> {g.required ? 'Required' : 'Optional'} <span>·</span> One selection
@@ -491,7 +496,7 @@ export default function OptionsEditor({ value, onChange, basePrice, dish = {}, p
               <Icon name="check" size={16} className="text-ok" />
             </div>
 
-            <details className="mt-5 rounded-xl border border-line p-3">
+            <details className="mt-5 rounded-xl border border-edge p-3">
               <summary className="cursor-pointer text-xs font-semibold text-muted">Popup heading shown to customers (optional)</summary>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
@@ -559,7 +564,7 @@ function CustomerPreview({ model, dish }) {
                       onClick={() => pick(g, c)}
                       className={`flex w-full items-center gap-3 rounded-xl border px-4 text-left shadow-card transition-colors ${
                         g.layout === 'list' ? 'py-5' : g.layout === 'grid' ? 'py-4' : 'py-4'
-                      } ${on ? 'border-ok bg-okbg' : 'border-line bg-chip/50 hover:bg-chip'}`}
+                      } ${on ? 'border-ok bg-okbg' : 'border-edge bg-card hover:bg-chip'}`}
                     >
                       {c.icon && <span aria-hidden="true" className="flex-none text-2xl">{c.icon}</span>}
                       <span className="min-w-0 flex-1">

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CONFIG } from '@/lib/config';
 import { useInstall } from '@/lib/useInstall';
+import { useScrollLock } from '@/lib/useScrollLock';
 import { useCafeOpen } from '@/lib/useCafeOpen';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Icon, Switch } from '@/components/owner/ui';
@@ -23,7 +24,7 @@ const readCollapsed = () => {
 function Logo({ compact }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-accent text-on-accent">
+      <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#1B5E3B] text-white">
         <Icon name="coffee" size={20} />
       </span>
       {!compact && (
@@ -222,6 +223,7 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
 export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, children }) {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
+  useScrollLock(drawer);
 
   useEffect(() => {
     if (!drawer) return;

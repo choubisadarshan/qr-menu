@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useScrollLock } from '@/lib/useScrollLock';
 import { CONFIG, money } from '@/lib/config';
 import Dropdown from '@/components/Dropdown';
 import { normalizeOptions } from '@/lib/options';
 
 export default function OrderForm({ order, phone = '', menu, onClose, onSaved }) {
+  useScrollLock(true);
   const [table, setTable] = useState(order?.table_number || '');
   const [name, setName] = useState(order?.customer_name || '');
   const [ph, setPh] = useState(phone);
@@ -93,8 +95,8 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
 
   const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
   return (
-    <div className="fixed inset-0 z-10 flex items-end justify-center bg-black/50 sm:items-center" role="dialog" aria-modal="true">
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-bg p-4 sm:rounded-3xl">
+    <div className="scrim anim-scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+      <div className="anim-modal max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-edge bg-bg p-4 shadow-sheet sm:rounded-3xl">
         <h2 className="mb-3 text-xl font-semibold">{order ? `Edit order #${order.id}` : 'New order'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
@@ -123,10 +125,10 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
             </span>
             <div className="flex items-center rounded-md bg-chip p-1">
               <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md bg-card text-lg font-semibold">−</button>
-              <span className="min-w-8 text-center font-semibold tabular-nums">{l.quantity}</span>
+              <span className="min-w-8 text-center font-semibold">{l.quantity}</span>
               <button onClick={() => qty(i, 1)} aria-label={`Add one ${l.name}`} className="h-8 w-8 rounded-md bg-accent text-lg font-semibold text-on-accent">+</button>
             </div>
-            <span className="w-20 text-right tabular-nums">{money(l.price * l.quantity)}</span>
+            <span className="w-20 text-right">{money(l.price * l.quantity)}</span>
           </div>
         ))}
 
@@ -145,7 +147,7 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
 
         <div className="mt-4 flex justify-between border-t border-line pt-3 text-lg font-semibold">
           <span>Total (incl. tax)</span>
-          <span className="tabular-nums text-accent">{money(total)}</span>
+          <span className="text-accent">{money(total)}</span>
         </div>
 
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}

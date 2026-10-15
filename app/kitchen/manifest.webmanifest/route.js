@@ -7,6 +7,6 @@ export function GET() {
     short: 'Kitchen',
     start: '/kitchen',
     app: 'kitchen',
-    color: '#b24a1d',
+    color: '#0f3d3e',
   });
 }

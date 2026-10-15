@@ -21,7 +21,7 @@ const readCollapsed = () => {
   }
 };
 
-function Logo({ compact }) {
+export function Logo({ compact, subtitle = 'Owner workspace' }) {
   return (
     <div className="flex items-center gap-3">
       <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#1B5E3B] text-white">
@@ -30,7 +30,7 @@ function Logo({ compact }) {
       {!compact && (
         <span className="min-w-0 leading-tight">
           <span className="block truncate font-display text-base font-semibold">{CONFIG.name}</span>
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Owner workspace</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{subtitle}</span>
         </span>
       )}
     </div>
@@ -38,11 +38,11 @@ function Logo({ compact }) {
 }
 
 // Avatar row + a small menu with Install app / QR codes / Sign out
-function UserMenu({ email, onSignOut, compact, up = true }) {
+export function UserMenu({ email, onSignOut, compact, up = true, roleLabel = 'Owner', showQr = true }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const { installed, canInstall, install } = useInstall();
-  const name = (email || 'owner').split('@')[0];
+  const name = (email || roleLabel.toLowerCase()).split('@')[0];
   const shown = name.charAt(0).toUpperCase() + name.slice(1);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ function UserMenu({ email, onSignOut, compact, up = true }) {
           <>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block truncate text-sm font-semibold">{shown}</span>
-              <span className="block truncate text-xs text-muted">Owner</span>
+              <span className="block truncate text-xs text-muted">{roleLabel}</span>
             </span>
             <Icon name="chevronDown" size={16} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
           </>
@@ -94,9 +94,11 @@ function UserMenu({ email, onSignOut, compact, up = true }) {
               <Icon name="install" /> Install app
             </button>
           )}
-          <a role="menuitem" href="/qr" className={item} onClick={() => setOpen(false)}>
-            <Icon name="qr" /> QR codes
-          </a>
+          {showQr && (
+            <a role="menuitem" href="/qr" className={item} onClick={() => setOpen(false)}>
+              <Icon name="qr" /> QR codes
+            </a>
+          )}
           <button role="menuitem" className={`${item} text-red-600`} onClick={() => { setOpen(false); onSignOut(); }}>
             <Icon name="signout" /> Sign out
           </button>

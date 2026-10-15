@@ -6,6 +6,8 @@ import { uploadDishImage } from '@/lib/uploadImage';
 import { normalizeOptions } from '@/lib/options';
 import OptionsEditor, { countGroups } from '@/components/OptionsEditor';
 import { useScrollLock } from '@/lib/useScrollLock';
+import { useDismiss } from '@/lib/useDismiss';
+import InstallAppButton from '@/components/owner/InstallAppButton';
 import { PageHeader, StatCard, SearchBox, Switch, Icon } from '@/components/owner/ui';
 
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
@@ -43,6 +45,13 @@ function toForm(m) {
 
 function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   const [f, setF] = useState(initial);
+  // Click outside / Esc closes the editor (asks first if something was changed)
+  const [startSnap] = useState(() => JSON.stringify(initial));
+  function requestClose() {
+    if (JSON.stringify(f) !== startSnap && !window.confirm('Discard your changes?')) return;
+    onCancel();
+  }
+  const dismiss = useDismiss(requestClose);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -131,6 +140,7 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   return (
     <div
       className="scrim anim-scrim fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end"
+      {...dismiss}
       role="dialog"
       aria-modal="true"
       aria-label={f.id ? 'Edit dish' : 'Add dish'}
@@ -385,7 +395,7 @@ function OptionsPanel({ options, onToggle, onEdit }) {
               </span>
               <span className="text-[11px] capitalize text-muted">{g.layout || 'list'} layout</span>
             </div>
-            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
+            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-edge bg-card">
               {(g.choices || []).map((c) => {
                 const on = c.available !== false;
                 return (
@@ -492,6 +502,7 @@ export default function OwnerMenu() {
   return (
     <section>
       <PageHeader title="Menu" subtitle="Good food, great coffee. All in one place.">
+        <InstallAppButton />
         <button
           onClick={() => setForm(EMPTY)}
           className="flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:bg-accent-hover"
@@ -514,7 +525,7 @@ export default function OwnerMenu() {
               key={c}
               onClick={() => setCat(c)}
               aria-pressed={cat === c}
-              className={`flex-none rounded-full border px-4 py-1.5 text-sm font-semibold ${cat === c ? 'border-accent bg-accent text-on-accent' : 'border-line bg-card text-muted hover:text-ink'}`}
+              className={`flex-none rounded-full border px-4 py-1.5 text-sm font-semibold ${cat === c ? 'border-accent bg-accent text-on-accent' : 'border-edge bg-card text-muted hover:text-ink'}`}
             >
               {c === 'all' ? 'All' : c}
             </button>
@@ -526,16 +537,16 @@ export default function OwnerMenu() {
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
       {loading && <p className="py-10 text-center text-muted">Loading menu…</p>}
       {!loading && items.length === 0 && !error && (
-        <p className="rounded-2xl border border-dashed border-line py-16 text-center text-muted">
+        <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
           No dishes yet. Tap “Add item” to create the first one.
         </p>
       )}
       {!loading && items.length > 0 && shown.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line py-12 text-center text-muted">No dishes match.</p>
+        <p className="rounded-2xl border border-dashed border-edge py-12 text-center text-muted">No dishes match.</p>
       )}
 
       {shown.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
           {shown.map((m) => {
             const isOn = m.available !== false;
             const opts = typeof m.options === 'string' ? (() => { try { return JSON.parse(m.options); } catch { return null; } })() : m.options;

@@ -84,7 +84,7 @@ export default function OwnerOrders() {
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
   const [range, setRange] = useState('today');
-  const [filter, setFilter] = useState('all'); // all | received | completed | collected | uncollected
+  const [filter, setFilter] = useState('all'); // all | received | completed
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null); // null | 'new' | an order
   const [error, setError] = useState('');
@@ -217,11 +217,11 @@ export default function OwnerOrders() {
           value={money(notCollected)}
           sub={`${unpaidOrders.length} unpaid order${unpaidOrders.length === 1 ? '' : 's'}`}
         />
-        <MoneyStat label="New orders" value={received.length} sub="Waiting to be accepted" />
-        <MoneyStat label="Completed orders" value={completed.length} sub="Finished orders" />
+        <StatCard align="left" label="New orders" value={received.length} sub="Waiting to be accepted" />
+        <StatCard align="left" label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="mb-5 flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <Tabs
           ariaLabel="Order queue filter"
           value={filter}
@@ -234,7 +234,7 @@ export default function OwnerOrders() {
             { value: 'uncollected', label: 'Not collected', count: unpaidOrders.length },
           ]}
         />
-        <div className="flex items-center gap-2 lg:ml-auto">
+        <div className="flex items-center gap-2 2xl:ml-auto">
           {/* Phone: the search field grows while the other controls slide out of its way, then slide back. */}
           <SearchBox
             ref={searchRef}
@@ -244,11 +244,11 @@ export default function OwnerOrders() {
             onFocus={openSearch}
             onBlur={closeSearch}
             placeholder="Search name, table or dish"
-            className={`min-w-0 flex-1 transition-shadow ${EASE} lg:w-64 lg:flex-none ${searchOpen ? 'max-md:shadow-soft' : ''}`}
+            className={`min-w-0 flex-1 transition-shadow ${EASE} 2xl:w-72 2xl:flex-none ${searchOpen ? 'max-md:shadow-soft' : ''}`}
           />
           <div
-            className={`flex flex-none items-center gap-2 transition-[max-width,opacity,transform] ${EASE} md:max-w-none md:translate-x-0 md:opacity-100 ${
-              searchOpen ? 'max-md:pointer-events-none max-md:max-w-0 max-md:translate-x-4 max-md:opacity-0' : 'max-md:max-w-80 max-md:opacity-100'
+            className={`flex flex-none items-center gap-2 transition-[max-width,opacity] ${EASE} md:max-w-none md:opacity-100 ${
+              searchOpen ? 'max-md:pointer-events-none max-md:max-w-0 max-md:opacity-0' : 'max-md:max-w-80 max-md:opacity-100'
             } ${clipBar ? 'max-md:overflow-hidden' : ''}`}
             aria-hidden={searchOpen ? 'true' : undefined}
           >
@@ -262,17 +262,17 @@ export default function OwnerOrders() {
 
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
       {shown.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line py-16 text-center text-muted">
+        <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
           {q ? 'No orders match your search.' : 'No orders here yet. Time for a coffee.'}
         </p>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => (
-          <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-line bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
+          <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-edge bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 text-xl font-bold">
-                {tableLabel(o.table_number)} <span className="tabular-nums text-sm font-normal text-muted">#{o.id}</span>
+                {tableLabel(o.table_number)} <span className="text-sm font-normal text-muted">#{o.id}</span>
               </div>
               <StatusPill status={o.status} />
             </div>
@@ -282,8 +282,8 @@ export default function OwnerOrders() {
               {o.order_items.map((i) => (
                 <li key={i.id} className="py-1.5">
                   <div className="flex justify-between gap-3">
-                    <span><span className="tabular-nums">{i.quantity}</span> × {i.item_name}</span>
-                    <span className="tabular-nums text-muted">{money(i.price * i.quantity)}</span>
+                    <span>{i.quantity} × {i.item_name}</span>
+                    <span className="text-muted">{money(i.price * i.quantity)}</span>
                   </div>
                   {i.options_text && <div className="text-xs text-muted">{i.options_text}</div>}
                   {i.note && <div className="text-xs font-semibold text-accent">Note: {i.note}</div>}

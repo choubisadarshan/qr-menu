@@ -7,7 +7,7 @@ import { PRESETS, rangeFor, eachDay, dayCount, toInputDate } from '@/lib/ranges'
 import Dropdown from '@/components/Dropdown';
 import { PageHeader, Icon } from '@/components/owner/ui';
 import { isTakeaway } from '@/lib/orderType';
-import { Panel, Kpi, ColumnChart, BarList } from '@/components/AnalyticsParts';
+import { Panel, Kpi, ColumnChart, BarList, compactMoney } from '@/components/AnalyticsParts';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const hourShort = (h) => `${h % 12 || 12}${h < 12 ? 'a' : 'p'}`;
@@ -192,7 +192,7 @@ export default function OwnerAnalytics() {
         {cur && range && (
           <button
             onClick={() => exportCsv(range, cur)}
-            className="flex items-center gap-2 rounded-lg border border-line bg-card px-4 py-2 text-sm font-semibold hover:bg-chip"
+            className="flex items-center gap-2 rounded-lg border border-edge bg-card px-4 py-2 text-sm font-semibold hover:bg-chip"
           >
             <Icon name="download" size={16} /> Export CSV
           </button>
@@ -202,7 +202,7 @@ export default function OwnerAnalytics() {
       <p className="-mt-3 text-xs text-muted">{range ? rangeLabel : 'Choose a valid range (up to 366 days).'}</p>
 
       {preset === 'custom' && (
-        <div className={`grid grid-cols-2 gap-3 border border-line bg-card p-4 sm:max-w-md ${card}`}>
+        <div className={`grid grid-cols-2 gap-3 border border-edge bg-card p-4 sm:max-w-md ${card}`}>
           <div>
             <label htmlFor="an-from" className="mb-1 block text-xs text-muted">From</label>
             <input id="an-from" type="date" className={`${dateInput} w-full`} value={customFrom}
@@ -217,7 +217,7 @@ export default function OwnerAnalytics() {
       )}
 
       {data.error && (
-        <div role="alert" className={`border border-line bg-card p-4 text-sm ${card}`}>
+        <div role="alert" className={`border border-edge bg-card p-4 text-sm ${card}`}>
           <p className="font-semibold text-red-500">Could not load analytics.</p>
           <p className="mt-1 text-muted">
             Make sure the analytics SQL was run in Supabase and you are signed in as the owner. Details: {data.error}
@@ -236,7 +236,7 @@ export default function OwnerAnalytics() {
       {cur && t && (
         <>
           {t.orders === 0 ? (
-            <p className={`border border-dashed border-line bg-card p-10 text-center text-muted ${card}`}>
+            <p className={`border border-dashed border-edge bg-card p-10 text-center text-muted ${card}`}>
               No orders in this date range. Try a wider range.
             </p>
           ) : (
@@ -288,7 +288,7 @@ export default function OwnerAnalytics() {
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
                       <Icon name="clock" size={14} /> Busiest hour
                     </div>
-                    <div className="mt-3 font-sans text-4xl font-bold tabular-nums">
+                    <div className="mt-3 font-display text-4xl font-semibold">
                       {busiest?.orders > 0 ? hourLong(busiest.hour) : '–'}
                     </div>
                     {busiest?.orders > 0 && <div className="text-sm opacity-80">to {hourLong(busyTo)}</div>}
@@ -296,7 +296,7 @@ export default function OwnerAnalytics() {
                   <div className="mt-5 text-sm">
                     {busiest?.orders > 0 ? (
                       <>
-                        <strong className="tabular-nums">{busiest.orders}</strong> orders and <strong className="tabular-nums">{money(busiest.sales)}</strong> came in during this hour. A good time to have an extra pair of hands.
+                        <strong>{busiest.orders}</strong> orders and <strong>{money(busiest.sales)}</strong> came in during this hour. A good time to have an extra pair of hands.
                       </>
                     ) : (
                       'Not enough orders yet to find your rush hour.'
@@ -314,7 +314,7 @@ export default function OwnerAnalytics() {
                     <div className="flex gap-1" role="group" aria-label="Rank dishes by">
                       {[['qty', 'Sold'], ['revenue', 'Revenue']].map(([k, l]) => (
                         <button key={k} onClick={() => setSortBy(k)} aria-pressed={sortBy === k}
-                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${sortBy === k ? 'border-accent bg-accent text-on-accent' : 'border-line'}`}>
+                          className={`rounded-lg border px-3 py-1 text-xs font-semibold ${sortBy === k ? 'border-accent bg-accent text-on-accent' : 'border-edge'}`}>
                           {l}
                         </button>
                       ))}
@@ -485,14 +485,14 @@ export default function OwnerAnalytics() {
                   <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <div className="text-muted">Collected</div>
-                      <div className="text-lg font-semibold tabular-nums text-ok">{money(t.collected)}</div>
+                      <div className="text-lg font-semibold text-ok">{money(t.collected)}</div>
                     </div>
                     <div>
                       <div className="text-muted">Still to collect</div>
-                      <div className="text-lg font-semibold tabular-nums text-warn">{money(t.pending)}</div>
+                      <div className="text-lg font-semibold">{money(t.pending)}</div>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted">Sales of <span className="tabular-nums">{money(t.sales)}</span> across <span className="tabular-nums">{t.orders}</span> orders.</p>
+                  <p className="mt-2 text-xs text-muted">Sales {money(t.sales)} across {t.orders} orders. Compact: {compactMoney(t.sales)}.</p>
                 </Panel>
               </div>
             </>

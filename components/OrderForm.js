@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useDismiss } from '@/lib/useDismiss';
 import { supabase } from '@/lib/supabase';
 import { useScrollLock } from '@/lib/useScrollLock';
 import { CONFIG, money } from '@/lib/config';
@@ -23,6 +24,15 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   );
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Click outside / Esc closes the form (asks first if something was typed)
+  const [startSnap] = useState(() => JSON.stringify([table, name, ph, note, lines]));
+  const dirty = JSON.stringify([table, name, ph, note, lines]) !== startSnap;
+  function requestClose() {
+    if (dirty && !window.confirm('Discard your changes?')) return;
+    onClose();
+  }
+  const dismiss = useDismiss(requestClose);
 
   const subtotal = lines.reduce((a, l) => a + l.price * l.quantity, 0);
   const tax = Math.round(subtotal * CONFIG.taxRate * 100) / 100;
@@ -93,10 +103,10 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
     onSaved();
   }
 
-  const input = 'w-full rounded-xl bg-chip p-3 outline-none focus:ring-2 focus:ring-accent';
+  const input = 'w-full rounded-xl border border-edge bg-card p-3 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 md:text-sm';
   return (
-    <div className="scrim anim-scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
-      <div className="anim-modal max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-edge bg-bg p-4 shadow-sheet sm:rounded-3xl">
+    <div className="scrim anim-scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" {...dismiss}>
+      <div className="anim-modal max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl border border-edge bg-card p-4 shadow-sheet sm:rounded-3xl sm:p-5">
         <h2 className="mb-3 text-xl font-semibold">{order ? `Edit order #${order.id}` : 'New order'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
@@ -117,14 +127,14 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
         <h3 className="mb-1 mt-4 text-sm font-semibold text-muted">Items</h3>
         {lines.length === 0 && <p className="py-2 text-sm text-muted">No items yet. Add a dish below.</p>}
         {lines.map((l, i) => (
-          <div key={`${l.name}|${l.options_text || ''}|${i}`} className="flex items-center justify-between gap-2 border-t border-line py-2 first:border-0">
+          <div key={`${l.name}|${l.options_text || ''}|${i}`} className="flex items-center justify-between gap-2 border-t border-edge py-2 first:border-0">
             <span className="min-w-0 flex-1">
               <span className="block truncate">{l.name}</span>
               {l.options_text && <span className="block truncate text-xs text-muted">{l.options_text}</span>}
               {l.note && <span className="block truncate text-xs text-accent">Note: {l.note}</span>}
             </span>
-            <div className="flex items-center rounded-md bg-chip p-1">
-              <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md bg-card text-lg font-semibold">−</button>
+            <div className="flex items-center rounded-lg border border-edge bg-chip p-1">
+              <button onClick={() => qty(i, -1)} aria-label={`Remove one ${l.name}`} className="h-8 w-8 rounded-md border border-edge bg-card text-lg font-semibold">−</button>
               <span className="min-w-8 text-center font-semibold">{l.quantity}</span>
               <button onClick={() => qty(i, 1)} aria-label={`Add one ${l.name}`} className="h-8 w-8 rounded-md bg-accent text-lg font-semibold text-on-accent">+</button>
             </div>
@@ -145,14 +155,14 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
           />
         </div>
 
-        <div className="mt-4 flex justify-between border-t border-line pt-3 text-lg font-semibold">
+        <div className="mt-4 flex justify-between border-t border-edge pt-3 text-lg font-semibold">
           <span>Total (incl. tax)</span>
           <span className="text-accent">{money(total)}</span>
         </div>
 
         {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-4 flex gap-2">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-chip p-3 font-semibold">Cancel</button>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-edge bg-card p-3 font-semibold hover:bg-chip">Cancel</button>
           <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-accent p-3 font-semibold text-on-accent disabled:opacity-60">
             {busy ? 'Saving…' : 'Save order'}
           </button>

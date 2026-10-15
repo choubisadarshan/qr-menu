@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 const VARIANT = {
-  pill: 'inline-flex min-w-36 items-center justify-between gap-2 rounded-md bg-chip px-4 py-2 text-sm font-semibold',
-  field: 'flex w-full items-center justify-between gap-2 rounded-xl bg-chip p-3 text-left',
+  pill: 'inline-flex min-w-36 items-center justify-between gap-2 rounded-lg border border-edge bg-card px-4 py-2 text-sm font-semibold hover:bg-chip',
+  field: 'flex w-full items-center justify-between gap-2 rounded-xl border border-edge bg-card p-3 text-left hover:bg-chip',
 };
 
 function Chevron({ open }) {
@@ -141,7 +141,7 @@ export default function Dropdown({
           role="listbox"
           onKeyDown={onMenuKey}
           style={style}
-          className="fixed z-50 overflow-y-auto rounded-2xl border border-line bg-card p-1.5 shadow-xl"
+          className="fixed z-50 overflow-y-auto rounded-2xl border border-edge bg-card p-1.5 shadow-xl"
         >
           {options.map((o) => {
             const selected = o.value === value;

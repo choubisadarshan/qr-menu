@@ -232,19 +232,19 @@ button:not(:disabled) {
 
 /* ---------- Owner workspace: calm soft-green look (only inside .owner-theme) ---------- */
 .owner-theme {
-  --bg: #f4f6f2;
-  --card: #ffffff;
+  --bg: #eef4ee; /* soft green page */
+  --card: #ffffff; /* white boxes */
   --ink: #1c2a22;
-  --muted: #5d6b62;
+  --muted: #55655b;
   --accent: #1b5e3b;
   --accent-hover: #154a2f;
   --on-accent: #ffffff;
-  --chip: #edf2ec;
-  --line: #e2e8e0;
-  --edge: #bcc8be;
+  --chip: #dfeae0; /* light green wells (tab bar, inputs on white) */
+  --line: #d0dcd2; /* dividers */
+  --edge: #aebfb1; /* borders of boxes, inputs, buttons */
   --ok: #1b5e3b;
   --on-ok: #ffffff;
-  --okbg: #e2f1e7;
+  --okbg: #cfe8d7; /* light green highlight (active tab, selected row) */
   --bar: #1b5e3b;
   --warn: #9a6700;
   --warnbg: #fdf1cf;
@@ -267,8 +267,8 @@ button:not(:disabled) {
   --accent-hover: #6ad39a;
   --on-accent: #08170f;
   --chip: #1e2d25;
-  --line: #2a3b32;
-  --edge: #3d5546;
+  --line: #2c4036;
+  --edge: #46624f;
   --ok: #5fd38a;
   --on-ok: #08170f;
   --okbg: #173325;

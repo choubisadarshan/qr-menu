@@ -101,18 +101,25 @@ export function PageHeader({ title, subtitle, children }) {
 // Filter tabs, e.g. All | Received | Completed. options: [{ value, label, count? }]
 export function Tabs({ value, onChange, options, ariaLabel }) {
   return (
-    <div role="group" aria-label={ariaLabel} className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl bg-chip p-1">
+    // Phones: swipe sideways. Larger screens: wrap to a second line instead of overflowing.
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className="no-scrollbar flex max-w-full flex-nowrap gap-1.5 overflow-x-auto rounded-xl border border-edge bg-chip p-1.5 sm:flex-wrap sm:overflow-visible"
+    >
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           aria-pressed={value === o.value}
-          className={`flex flex-none items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors ${value === o.value ? 'bg-card text-ink shadow-card' : 'text-muted hover:text-ink'}`}
+          className={`flex flex-none items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
+            value === o.value ? 'border-ok/30 bg-okbg text-ok shadow-card' : 'border-transparent text-muted hover:bg-card/70 hover:text-ink'
+          }`}
         >
           {o.label}
           {o.count != null && (
-            <span className={`rounded-full px-1.5 text-xs tabular-nums ${value === o.value ? 'bg-okbg text-ok' : 'bg-line text-muted'}`}>{o.count}</span>
+            <span className={`rounded-full px-1.5 text-xs tabular-nums ${value === o.value ? 'bg-card text-ok' : 'bg-card/80 text-muted'}`}>{o.count}</span>
           )}
         </button>
       ))}
@@ -137,7 +144,7 @@ export function SearchBox({ value, onChange, placeholder, className = '', ref, i
         onBlur={onBlur}
         onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-line bg-card py-2.5 pl-9 pr-3 text-base outline-none transition-shadow duration-300 focus:ring-2 focus:ring-accent md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
+        className="w-full rounded-xl border border-edge bg-card py-2.5 pl-9 pr-3 text-base outline-none transition-shadow duration-300 focus:ring-2 focus:ring-accent md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
       />
     </label>
   );
@@ -146,7 +153,7 @@ export function SearchBox({ value, onChange, placeholder, className = '', ref, i
 // Compact stat card (Orders page keeps the compact size; Menu page uses the same).
 export function StatCard({ label, value, sub, align = 'center' }) {
   return (
-    <div className={`min-w-0 rounded-2xl border border-line bg-card p-3 shadow-card ${align === 'left' ? 'text-left' : 'text-center'}`}>
+    <div className={`min-w-0 rounded-2xl border border-edge bg-card p-3 shadow-card ${align === 'left' ? 'text-left' : 'text-center'}`}>
       <div className="truncate font-sans text-xl font-semibold tabular-nums sm:text-2xl">{value}</div>
       <div className="text-xs font-medium">{label}</div>
       {sub && <div className="mt-0.5 hidden truncate text-[11px] text-muted sm:block">{sub}</div>}
@@ -159,7 +166,7 @@ export function StatCard({ label, value, sub, align = 'center' }) {
 export function MoneyStat({ label, value, sub, tone }) {
   const color = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink';
   return (
-    <div className="min-w-0 rounded-2xl border border-line bg-card p-4 shadow-card">
+    <div className="min-w-0 rounded-2xl border border-edge bg-card p-4 shadow-card">
       <div className="truncate text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
       <div className={`mt-1 truncate font-sans text-[1.7rem] font-bold leading-tight tabular-nums min-[420px]:text-3xl sm:text-4xl ${color}`}>{value}</div>
       <div className="mt-1 min-h-4 truncate text-xs text-muted">{sub}</div>

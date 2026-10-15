@@ -87,7 +87,7 @@ function UserMenu({ email, onSignOut, compact, up = true }) {
       {open && (
         <div
           role="menu"
-          className={`absolute z-50 w-60 rounded-2xl border border-line bg-card p-1.5 shadow-xl ${up ? 'bottom-full mb-2' : 'top-full mt-2'} ${compact ? 'left-0' : 'left-0 right-0 w-auto'}`}
+          className={`absolute z-50 w-60 rounded-2xl border border-edge bg-card p-1.5 shadow-xl ${up ? 'bottom-full mb-2' : 'top-full mt-2'} ${compact ? 'left-0' : 'left-0 right-0 w-auto'}`}
         >
           {!installed && canInstall && (
             <button role="menuitem" className={item} onClick={() => { setOpen(false); install(); }}>
@@ -264,7 +264,7 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
               type="button"
               onClick={() => setDrawer(true)}
               aria-label="Open menu"
-              className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-line bg-card lg:hidden"
+              className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card lg:hidden"
             >
               <Icon name="hamburger" />
             </button>
@@ -274,19 +274,19 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-expanded={!collapsed}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-line bg-card hover:bg-chip lg:grid"
+              className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card hover:bg-chip lg:grid"
             >
               <Icon name={collapsed ? 'chevronRight' : 'panelLeft'} />
             </button>
 
-            <div role="tablist" aria-label="Sections" className="flex min-w-0 flex-1 gap-1 rounded-xl bg-chip p-1 sm:max-w-md sm:flex-none">
+            <div role="tablist" aria-label="Sections" className="flex min-w-0 flex-1 gap-1 rounded-xl border border-edge bg-chip p-1 sm:max-w-md sm:flex-none">
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   role="tab"
                   aria-selected={tab === t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'bg-card text-ink shadow-card' : 'text-muted hover:text-ink'}`}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'border-ok/30 bg-okbg text-ok shadow-card' : 'border-transparent text-muted hover:bg-card/70 hover:text-ink'}`}
                 >
                   {t.id}
                   {t.id === 'Orders' && badge > 0 && (

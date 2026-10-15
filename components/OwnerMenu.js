@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
@@ -7,7 +7,6 @@ import { normalizeOptions } from '@/lib/options';
 import OptionsEditor, { countGroups } from '@/components/OptionsEditor';
 import { useScrollLock } from '@/lib/useScrollLock';
 import { useDismiss } from '@/lib/useDismiss';
-import InstallAppButton from '@/components/owner/InstallAppButton';
 import { PageHeader, StatCard, SearchBox, Switch, Icon } from '@/components/owner/ui';
 
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
@@ -374,48 +373,102 @@ function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   );
 }
 
-// Read-only view of a dish's customization options, with an on/off switch for every choice.
-function OptionsPanel({ options, onToggle, onEdit }) {
+// Right-side drawer with a dish's customization groups and an on/off switch for every choice.
+// Slides in from the right (and back out) on phones and desktop alike.
+function OptionsDrawer({ dish, options, onToggle, onEdit, onClose }) {
+  const [shown, setShown] = useState(false);
+  const closing = useRef(false);
+  useScrollLock(true);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true)); // next frame, so the slide-in transition runs
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const close = useCallback(
+    (after) => {
+      if (closing.current) return;
+      closing.current = true;
+      setShown(false);
+      setTimeout(() => {
+        onClose();
+        if (typeof after === 'function') after();
+      }, 300);
+    },
+    [onClose]
+  );
+  const dismiss = useDismiss(close);
   const groups = Array.isArray(options?.groups) ? options.groups : [];
+
   return (
-    <div className="mt-3 rounded-2xl bg-chip/60 p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{options.title || 'Customization options'}</p>
-        <button type="button" onClick={onEdit} className="rounded-lg bg-card px-3 py-1.5 text-xs font-semibold shadow-card">
-          Edit, add or reorder
-        </button>
-      </div>
-      <div className="space-y-4">
-        {groups.map((g) => (
-          <div key={g.key}>
-            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold">{g.label || g.key}</span>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${g.required !== false ? 'bg-warnbg text-warn' : 'bg-line text-muted'}`}>
-                {g.required !== false ? 'Required' : 'Optional'}
-              </span>
-              <span className="text-[11px] capitalize text-muted">{g.layout || 'list'} layout</span>
-            </div>
-            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-edge bg-card">
-              {(g.choices || []).map((c) => {
-                const on = c.available !== false;
-                return (
-                  <li key={c.id} className="flex items-center gap-3 px-3 py-2">
-                    {c.icon && <span aria-hidden="true" className="text-lg">{c.icon}</span>}
-                    <div className={`min-w-0 flex-1 ${on ? '' : 'opacity-50'}`}>
-                      <div className="truncate text-sm font-medium">{c.name}</div>
-                      {(c.sub || c.desc) && <div className="truncate text-xs text-muted">{c.sub || c.desc}</div>}
-                    </div>
-                    <span className={`flex-none text-sm tabular-nums ${on ? '' : 'opacity-50'}`}>
-                      {Number(c.price) > 0 ? `+${money(c.price)}` : Number(c.price) < 0 ? `-${money(Math.abs(c.price))}` : 'Free'}
-                    </span>
-                    <Switch size="sm" checked={on} onChange={() => onToggle(g.key, c.id)} label={`${c.name} available`} />
-                  </li>
-                );
-              })}
-            </ul>
+    <div
+      className={`fixed inset-0 z-50 flex justify-end transition-[background-color,backdrop-filter] duration-300 ease-out ${shown ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0'}`}
+      {...dismiss}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${dish.name} customizations`}
+    >
+      <aside
+        className={`flex h-full w-full max-w-md flex-col border-l border-edge bg-card shadow-sheet transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${shown ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        <div className="flex items-start gap-3 border-b border-line px-4 py-4">
+          <span aria-hidden="true" className="grid h-11 w-11 flex-none place-items-center overflow-hidden rounded-xl bg-chip text-2xl">
+            {dish.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={dish.image_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              dish.emoji || '🍽️'
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div role="heading" aria-level={2} className="truncate text-lg font-semibold">{dish.name}</div>
+            <p className="text-xs text-muted">
+              {options?.title || 'Customizations'} · {groups.length} group{groups.length === 1 ? '' : 's'}
+            </p>
           </div>
-        ))}
-      </div>
+          <button type="button" onClick={() => close()} aria-label="Close" className="grid h-9 w-9 flex-none place-items-center rounded-lg text-muted hover:bg-chip hover:text-ink">
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
+          <p className="text-xs text-muted">Switch a choice off when it runs out. Customers will not see it.</p>
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold">{g.label || g.key}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${g.required !== false ? 'bg-warnbg text-warn' : 'bg-line text-muted'}`}>
+                  {g.required !== false ? 'Required' : 'Optional'}
+                </span>
+              </div>
+              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-edge bg-card">
+                {(g.choices || []).map((c) => {
+                  const on = c.available !== false;
+                  return (
+                    <li key={c.id} className="flex items-center gap-3 px-3 py-2.5">
+                      {c.icon && <span aria-hidden="true" className="text-lg">{c.icon}</span>}
+                      <div className={`min-w-0 flex-1 transition-opacity ${on ? '' : 'opacity-50'}`}>
+                        <div className="truncate text-sm font-medium">{c.name}</div>
+                        {(c.sub || c.desc) && <div className="truncate text-xs text-muted">{c.sub || c.desc}</div>}
+                      </div>
+                      <span className={`flex-none text-sm tabular-nums transition-opacity ${on ? '' : 'opacity-50'}`}>
+                        {Number(c.price) > 0 ? `+${money(c.price)}` : Number(c.price) < 0 ? `-${money(Math.abs(c.price))}` : 'Free'}
+                      </span>
+                      <Switch size="sm" checked={on} onChange={() => onToggle(g.key, c.id)} label={`${c.name} available`} />
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="safe-bottom border-t border-line px-4 pt-3">
+          <button type="button" onClick={() => close(onEdit)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-chip px-4 py-2.5 text-sm font-semibold hover:bg-line">
+            <Icon name="edit" size={14} /> Edit, add or reorder
+          </button>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -426,7 +479,7 @@ export default function OwnerMenu() {
   const [form, setForm] = useState(null);
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('all');
-  const [openOpts, setOpenOpts] = useState(null); // id of the dish whose options are expanded
+  const [optsFor, setOptsFor] = useState(null); // id of the dish whose customizations drawer is open
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -459,7 +512,7 @@ export default function OwnerMenu() {
     load();
   }
 
-  // Switch ONE customization choice on/off without opening the editor.
+  // Switch ONE customization choice on/off without opening the editor (updates instantly, then saves).
   async function toggleChoice(m, groupKey, choiceId) {
     let o = m.options;
     if (typeof o === 'string') {
@@ -477,6 +530,7 @@ export default function OwnerMenu() {
           : { ...g, choices: g.choices.map((c) => (c.id === choiceId ? { ...c, available: c.available === false } : c)) }
       ),
     };
+    setItems((prev) => prev.map((x) => (x.id === m.id ? { ...x, options: next } : x)));
     const { data, error: e } = await supabase.from('menu_items').update({ options: next }).eq('id', m.id).select();
     setError(e || !data || data.length === 0 ? 'Could not update the option. Are you signed in as the owner?' : '');
     load();
@@ -502,7 +556,6 @@ export default function OwnerMenu() {
   return (
     <section>
       <PageHeader title="Menu" subtitle="Good food, great coffee. All in one place.">
-        <InstallAppButton />
         <button
           onClick={() => setForm(EMPTY)}
           className="flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:bg-accent-hover"
@@ -551,11 +604,12 @@ export default function OwnerMenu() {
             const isOn = m.available !== false;
             const opts = typeof m.options === 'string' ? (() => { try { return JSON.parse(m.options); } catch { return null; } })() : m.options;
             const groups = Array.isArray(opts?.groups) ? opts.groups : [];
-            const expanded = openOpts === m.id;
             return (
               <li key={m.id} className="p-3 sm:p-4">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-3 md:flex-nowrap">
-                  <div className="flex min-w-0 flex-1 items-center gap-3 basis-full md:basis-auto">
+                {/* Phone: dish on top, then category / price / availability on ONE row, Edit under the switch.
+                    Desktop (md+): everything on a single row. */}
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div aria-hidden="true" className={`grid h-14 w-14 flex-none place-items-center overflow-hidden rounded-xl bg-chip text-3xl ${isOn ? '' : 'opacity-50'}`}>
                       {m.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -574,44 +628,57 @@ export default function OwnerMenu() {
                     </div>
                   </div>
 
-                  <span className="rounded-full bg-chip px-3 py-1 text-xs font-semibold md:w-28 md:flex-none md:text-center">
-                    <span className="block truncate">{m.category || 'Other'}</span>
-                  </span>
-                  <div className="w-24 flex-none font-semibold tabular-nums md:text-right">
-                    {groups.length > 0 && <span className="mr-1 text-xs font-normal text-muted">from</span>}
-                    {money(m.price ?? 0)}
+                  <div className="flex items-center gap-3 md:contents">
+                    <div className="min-w-0 flex-1 md:w-28 md:flex-none md:text-center">
+                      <span className="inline-block max-w-full truncate rounded-full bg-chip px-3 py-1 align-middle text-xs font-semibold">{m.category || 'Other'}</span>
+                    </div>
+                    <div className="flex-none whitespace-nowrap text-right font-semibold tabular-nums md:w-24">
+                      {groups.length > 0 && <span className="mr-1 text-xs font-normal text-muted">from</span>}
+                      {money(m.price ?? 0)}
+                    </div>
+                    <label className="flex flex-none items-center gap-2 text-sm md:w-36">
+                      <Switch checked={isOn} onChange={() => toggle(m)} label={`${m.name} available`} />
+                      <span className={`w-[5.25rem] md:w-auto ${isOn ? 'font-semibold text-ok' : 'text-muted'}`}>{isOn ? 'Available' : 'Unavailable'}</span>
+                    </label>
                   </div>
-                  <label className="ml-auto flex flex-none items-center gap-2 text-sm md:ml-0 md:w-36">
-                    <Switch checked={isOn} onChange={() => toggle(m)} label={`${m.name} available`} />
-                    <span className={isOn ? 'font-semibold text-ok' : 'text-muted'}>{isOn ? 'Available' : 'Unavailable'}</span>
-                  </label>
-                  <button onClick={() => setForm(toForm(m))} className={`${btn} flex flex-none items-center gap-1.5 bg-chip`}>
+
+                  <button onClick={() => setForm(toForm(m))} className={`${btn} flex min-h-10 flex-none items-center gap-1.5 self-end bg-chip md:min-h-0 md:self-auto`}>
                     <Icon name="edit" size={14} /> Edit
                   </button>
                 </div>
 
                 {groups.length > 0 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setOpenOpts(expanded ? null : m.id)}
-                      aria-expanded={expanded}
-                      className="mt-3 flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-semibold text-accent"
-                    >
-                      <Icon name="sliders" size={16} />
-                      Customizations · {groups.length} group{groups.length > 1 ? 's' : ''}
-                      <Icon name="chevronDown" size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                    </button>
-                    {expanded && (
-                      <OptionsPanel options={opts} onToggle={(gk, cid) => toggleChoice(m, gk, cid)} onEdit={() => setForm(toForm(m))} />
-                    )}
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setOptsFor(m.id)}
+                    aria-haspopup="dialog"
+                    className="mt-3 flex w-full items-center gap-2 rounded-xl border border-edge bg-chip/60 px-3 py-2.5 text-left text-sm font-semibold text-accent hover:bg-chip"
+                  >
+                    <Icon name="sliders" size={16} />
+                    <span className="flex-1">Customizations · {groups.length} group{groups.length > 1 ? 's' : ''}</span>
+                    <Icon name="chevronRight" size={16} />
+                  </button>
                 )}
               </li>
             );
           })}
         </ul>
       )}
+
+      {optsFor != null && (() => {
+        const m = items.find((x) => x.id === optsFor);
+        if (!m) return null;
+        const o = typeof m.options === 'string' ? (() => { try { return JSON.parse(m.options); } catch { return null; } })() : m.options;
+        return (
+          <OptionsDrawer
+            dish={m}
+            options={o}
+            onToggle={(gk, cid) => toggleChoice(m, gk, cid)}
+            onEdit={() => setForm(toForm(m))}
+            onClose={() => setOptsFor(null)}
+          />
+        );
+      })()}
 
       {form && (
         <DishForm

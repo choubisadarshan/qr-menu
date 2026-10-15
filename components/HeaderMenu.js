@@ -9,7 +9,7 @@ import { useInstall } from '@/lib/useInstall';
 export default function HeaderMenu({ onSignOut }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const { installed, canInstall, hint, install } = useInstall();
+  const { installed, canInstall, install } = useInstall();
 
   useEffect(() => {
     if (!open) return;
@@ -78,9 +78,6 @@ export default function HeaderMenu({ onSignOut }) {
             >
               <span aria-hidden="true">⬇️</span> Install app
             </button>
-          )}
-          {!installed && !canInstall && hint && (
-            <p className="px-3 py-2 text-xs text-muted">{hint}</p>
           )}
           <a role="menuitem" href="/qr" onClick={() => setOpen(false)} className={item}>
             <span aria-hidden="true">▦</span> QR codes

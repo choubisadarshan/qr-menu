@@ -41,7 +41,7 @@ function Logo({ compact }) {
 function UserMenu({ email, onSignOut, compact, up = true }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const { installed, canInstall, hint, install } = useInstall();
+  const { installed, canInstall, install } = useInstall();
   const name = (email || 'owner').split('@')[0];
   const shown = name.charAt(0).toUpperCase() + name.slice(1);
 
@@ -94,7 +94,6 @@ function UserMenu({ email, onSignOut, compact, up = true }) {
               <Icon name="install" /> Install app
             </button>
           )}
-          {!installed && !canInstall && hint && <p className="px-3 py-2 text-xs text-muted">{hint}</p>}
           <a role="menuitem" href="/qr" className={item} onClick={() => setOpen(false)}>
             <Icon name="qr" /> QR codes
           </a>

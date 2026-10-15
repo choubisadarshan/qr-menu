@@ -7,6 +7,6 @@ export function GET() {
     short: 'Owner',
     start: '/owner',
     app: 'owner',
-    color: '#17434b',
+    color: '#1B5E3B',
   });
 }

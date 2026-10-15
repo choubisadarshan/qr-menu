@@ -262,7 +262,7 @@ export default function OwnerAnalytics() {
                           label: shortDate(d.day),
                           value: d.sales,
                           isMoney: true,
-                          title: `${shortDate(d.day)}: ${money(d.sales)} · ${d.orders} orders`,
+                          tip: { title: shortDate(d.day), value: money(d.sales), sub: `${d.orders} order${d.orders === 1 ? '' : 's'}` },
                         }))}
                       />
                     </Panel>
@@ -276,7 +276,7 @@ export default function OwnerAnalytics() {
                           label: hourShort(h.hour),
                           value: h.sales,
                           isMoney: true,
-                          title: `${hourLong(h.hour)}: ${money(h.sales)} · ${h.orders} orders`,
+                          tip: { title: hourLong(h.hour), value: money(h.sales), sub: `${h.orders} order${h.orders === 1 ? '' : 's'}` },
                         }))}
                       />
                     </Panel>
@@ -420,7 +420,7 @@ export default function OwnerAnalytics() {
                         key: h.hour,
                         label: hourShort(h.hour),
                         value: h.orders,
-                        title: `${hourLong(h.hour)}: ${h.orders} orders`,
+                        tip: { title: hourLong(h.hour), value: `${h.orders} order${h.orders === 1 ? '' : 's'}`, sub: money(h.sales) + ' in sales' },
                       }))}
                     />
                   </Panel>
@@ -435,7 +435,7 @@ export default function OwnerAnalytics() {
                         label: w.label,
                         value: w.sales,
                         isMoney: true,
-                        title: `${w.label}: ${money(w.sales)} · ${w.orders} orders`,
+                        tip: { title: w.label, value: money(w.sales), sub: `${w.orders} order${w.orders === 1 ? '' : 's'}` },
                       }))}
                     />
                   </Panel>

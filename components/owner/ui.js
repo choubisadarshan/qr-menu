@@ -99,21 +99,26 @@ export function PageHeader({ title, subtitle, children }) {
 }
 
 // Filter tabs, e.g. All | Received | Completed. options: [{ value, label, count? }]
+// One row that scrolls sideways on every screen size (never wraps onto a second line).
+// The scroller itself has no side padding, so pills slide cleanly under the rounded edge with no gap;
+// the breathing room at the start/end comes from margins on the first/last pill instead.
 export function Tabs({ value, onChange, options, ariaLabel }) {
   return (
-    // Phones: swipe sideways. Larger screens: wrap to a second line instead of overflowing.
     <div
       role="group"
       aria-label={ariaLabel}
-      className="no-scrollbar flex max-w-full flex-nowrap gap-1.5 overflow-x-auto rounded-xl border border-edge bg-chip p-1.5 sm:flex-wrap sm:overflow-visible"
+      className="no-scrollbar flex w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain rounded-xl border border-edge bg-chip py-1.5 [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] sm:w-fit sm:max-w-full [&>*:first-child]:ml-1.5 [&>*:last-child]:mr-1.5"
     >
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
-          onClick={() => onChange(o.value)}
+          onClick={(e) => {
+            onChange(o.value);
+            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }}
           aria-pressed={value === o.value}
-          className={`flex flex-none items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
+          className={`flex flex-none snap-start items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
             value === o.value ? 'border-ok/30 bg-okbg text-ok shadow-card' : 'border-transparent text-muted hover:bg-card/70 hover:text-ink'
           }`}
         >

@@ -180,10 +180,10 @@ export function StatCard({ label, value, sub, align = 'center' }) {
 export function MoneyStat({ label, value, sub, tone }) {
   const color = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : 'text-ink';
   return (
-    <div className="min-w-0 rounded-2xl border border-edge bg-card p-4 shadow-card">
-      <div className="truncate text-xs font-semibold uppercase tracking-wide text-muted">{label}</div>
-      <div className={`mt-1 truncate font-sans text-[1.7rem] font-bold leading-tight tabular-nums min-[420px]:text-3xl sm:text-4xl ${color}`}>{value}</div>
-      <div className="mt-1 min-h-4 truncate text-xs text-muted">{sub}</div>
+    <div className="min-w-0 rounded-2xl border border-edge bg-card p-3.5 shadow-card sm:p-4">
+      <div className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted sm:text-xs">{label}</div>
+      <div className={`mt-1 truncate font-sans text-2xl font-bold leading-tight tabular-nums sm:text-[1.75rem] ${color}`}>{value}</div>
+      <div className="mt-1 min-h-4 truncate text-[11px] text-muted sm:text-xs">{sub}</div>
     </div>
   );
 }

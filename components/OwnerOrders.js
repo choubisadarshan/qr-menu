@@ -5,7 +5,7 @@ import { money } from '@/lib/config';
 import OrderForm from '@/components/OrderForm';
 import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
-import { PageHeader, StatCard, MoneyStat, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
+import { PageHeader, MoneyStat, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
 import { isTakeaway, tableLabel } from '@/lib/orderType';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
@@ -149,7 +149,7 @@ export default function OwnerOrders() {
     <section>
       <PageHeader title="Orders" subtitle="A little less busywork. A little more brewing." />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-[1.4fr_1.4fr_1fr_1fr]">
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MoneyStat
           tone="ok"
           label={`Collected · ${rangeNote}`}
@@ -162,8 +162,8 @@ export default function OwnerOrders() {
           value={money(notCollected)}
           sub={`${unpaidOrders.length} unpaid order${unpaidOrders.length === 1 ? '' : 's'}`}
         />
-        <StatCard align="left" label="New orders" value={received.length} sub="Waiting to be accepted" />
-        <StatCard align="left" label="Completed orders" value={completed.length} sub="Finished orders" />
+        <MoneyStat label="New orders" value={received.length} sub="Waiting to be accepted" />
+        <MoneyStat label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
       <div className="mb-5 flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">

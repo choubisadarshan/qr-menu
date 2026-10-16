@@ -268,7 +268,7 @@ button:not(:disabled) {
   --on-accent: #08170f;
   --chip: #1e2d25;
   --line: #2c4036;
-  --edge: #46624f;
+  --edge: #33493c; /* softer than before: borders no longer glare on the dark cards */
   --ok: #5fd38a;
   --on-ok: #08170f;
   --okbg: #173325;

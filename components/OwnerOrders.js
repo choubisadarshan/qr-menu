@@ -6,14 +6,9 @@ import OrderForm from '@/components/OrderForm';
 import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
 import { PageHeader, StatCard, MoneyStat, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
-import { tableLabel } from '@/lib/orderType';
+import { isTakeaway, tableLabel } from '@/lib/orderType';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
-// Two statuses only: received (amber) and completed (green)
-const STRIP = {
-  received: 'border-l-warn',
-  completed: 'border-l-ok',
-};
 const RANGE_OPTIONS = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'Last 7 days' },
@@ -21,64 +16,14 @@ const RANGE_OPTIONS = [
 ];
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
 // Card action buttons: 44px touch target on phones, compact on desktop.
-const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-4 text-sm font-semibold sm:min-h-9';
+const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold sm:min-h-9';
+const iconBtn = 'grid h-11 w-11 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
 const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
 const phoneOf = (o) => {
   const c = o.order_contacts;
   return (Array.isArray(c) ? c[0]?.phone : c?.phone) || '';
 };
-
-function OrderDetails({ o }) {
-  const phone = phoneOf(o);
-  const created = new Date(o.created_at).getTime();
-  const recent = Date.now() - created < TWELVE_HOURS;
-  const done = o.status === 'completed';
-
-  return (
-    <dl className="mt-3 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-      <dt className="text-muted">Name</dt>
-      <dd className="break-words font-medium">{o.customer_name}</dd>
-
-      <dt className="text-muted">Phone</dt>
-      <dd>
-        {phone ? (
-          <a href={`tel:${phone}`} className="font-medium tabular-nums text-accent">{phone}</a>
-        ) : (
-          <span className="text-muted">Not given</span>
-        )}
-      </dd>
-
-      <dt className="text-muted">Placed</dt>
-      <dd className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-medium">{recent ? clock(o.created_at) : dateTime(o.created_at)}</span>
-        {recent && !done && (
-          <span className="tabular-nums text-muted">
-            <LiveSince since={o.created_at} /> ago
-          </span>
-        )}
-      </dd>
-
-      {done && (
-        <>
-          <dt className="text-muted">Done</dt>
-          <dd className="flex flex-wrap items-baseline gap-x-2">
-            {o.completed_at ? (
-              <>
-                <span className="font-medium">{recent ? clock(o.completed_at) : dateTime(o.completed_at)}</span>
-                <span className="tabular-nums text-muted">
-                  took {formatDuration(new Date(o.completed_at).getTime() - created)}
-                </span>
-              </>
-            ) : (
-              <span className="text-muted">Time not recorded</span>
-            )}
-          </dd>
-        </>
-      )}
-    </dl>
-  );
-}
 
 export default function OwnerOrders() {
   const [orders, setOrders] = useState([]);
@@ -268,63 +213,124 @@ export default function OwnerOrders() {
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {shown.map((o) => (
-          <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-edge bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 text-xl font-bold">
-                {tableLabel(o.table_number)} <span className="text-sm font-normal text-muted">#{o.id}</span>
-              </div>
-              <StatusPill status={o.status} />
-            </div>
-            <OrderDetails o={o} />
-
-            <ul className="my-3 divide-y divide-line">
-              {o.order_items.map((i) => (
-                <li key={i.id} className="py-1.5">
-                  <div className="flex justify-between gap-3">
-                    <span>{i.quantity} × {i.item_name}</span>
-                    <span className="text-muted">{money(i.price * i.quantity)}</span>
+        {shown.map((o) => {
+          const phone = phoneOf(o);
+          const created = new Date(o.created_at).getTime();
+          const recent = Date.now() - created < TWELVE_HOURS;
+          const done = o.status === 'completed';
+          const takeaway = isTakeaway(o.table_number);
+          return (
+            <article key={o.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
+              {/* Header: table badge, order number + customer, status */}
+              <div className="flex items-center gap-3 bg-chip/50 px-4 py-3.5">
+                <div className="grid h-12 w-12 flex-none place-items-center rounded-xl bg-accent text-on-accent">
+                  <div className="text-center leading-none">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
+                    <div className={`mt-0.5 font-bold ${takeaway ? 'text-sm' : 'text-xl'}`}>{takeaway ? 'away' : o.table_number}</div>
                   </div>
-                  {i.options_text && <div className="text-xs text-muted">{i.options_text}</div>}
-                  {i.note && <div className="text-xs font-semibold text-accent">Note: {i.note}</div>}
-                </li>
-              ))}
-            </ul>
-            {o.note && <p className="mb-3 rounded-lg bg-chip p-2 text-sm text-accent">Note: {o.note}</p>}
-
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
-              <div className="mr-auto min-w-0">
-                <div className="text-xl font-semibold tabular-nums">{money(o.total)}</div>
-                <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-warn'}`}>
-                  {isPaid(o) ? 'Collected' : 'Not collected'}
                 </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">Order #{o.id}</div>
+                  <div className="flex items-center gap-1.5 text-sm text-muted">
+                    <Icon name="user" size={13} />
+                    <span className="truncate">{o.customer_name}</span>
+                  </div>
+                </div>
+                <span
+                  className={`inline-flex flex-none items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}
+                >
+                  <Icon name={done ? 'check' : 'clock'} size={13} />
+                  {done ? 'Completed' : 'Received'}
+                </span>
               </div>
-              {/* One-way switch: Unpaid -> Paid. Once Paid it is locked (disabled), same size, so nothing shifts. */}
-              <button
-                type="button"
-                onClick={() => markPaid(o)}
-                disabled={isPaid(o)}
-                aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
-                title={isPaid(o) ? 'Paid' : 'Tap to mark as paid'}
-                className={`${act} w-28 flex-none border transition-colors ${
-                  isPaid(o) ? 'cursor-default border-transparent bg-okbg text-ok' : 'border-warn/40 bg-warnbg text-warn active:scale-[0.98]'
-                }`}
-              >
-                {isPaid(o) ? <Icon name="check" size={16} /> : <span aria-hidden="true" className="h-2 w-2 rounded-full bg-warn" />}
-                {isPaid(o) ? 'Paid' : 'Unpaid'}
-              </button>
-              {o.status !== 'completed' && (
-                <button onClick={() => patch(o.id, { status: 'completed' })} className={`${act} bg-accent text-on-accent hover:bg-accent-hover max-sm:basis-full`}>
-                  Mark Completed
+
+              {/* Times + phone */}
+              <div className="space-y-1.5 border-t border-line px-4 py-3 text-xs text-muted">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="clock" size={13} /> Placed{' '}
+                    <b className="font-semibold text-ink">{recent ? clock(o.created_at) : dateTime(o.created_at)}</b>
+                    {recent && !done && (
+                      <span className="tabular-nums">
+                        · <LiveSince since={o.created_at} /> ago
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    Done{' '}
+                    {done && o.completed_at ? (
+                      <>
+                        <b className="font-semibold text-ink">{recent ? clock(o.completed_at) : dateTime(o.completed_at)}</b>
+                        <span className="tabular-nums text-ok"> · {formatDuration(new Date(o.completed_at).getTime() - created)}</span>
+                      </>
+                    ) : (
+                      <b className="font-semibold text-ink">—</b>
+                    )}
+                  </span>
+                </div>
+                {phone && (
+                  <a href={`tel:${phone}`} className="flex w-fit items-center gap-1.5 tabular-nums hover:text-accent">
+                    <Icon name="phone" size={13} /> {phone}
+                  </a>
+                )}
+              </div>
+
+              {/* Items */}
+              <ul className="flex-1 space-y-2.5 border-t border-line px-4 py-3.5">
+                {o.order_items.map((i) => (
+                  <li key={i.id} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex-none rounded-md bg-chip px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted">{i.quantity}×</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex justify-between gap-3">
+                        <span className="min-w-0 break-words font-medium">{i.item_name}</span>
+                        <span className="flex-none font-semibold tabular-nums">{money(i.price * i.quantity)}</span>
+                      </div>
+                      {i.options_text && <div className="text-xs text-muted">{i.options_text}</div>}
+                      {i.note && <div className="text-xs font-semibold text-accent">Note: {i.note}</div>}
+                    </div>
+                  </li>
+                ))}
+                {o.note && <li className="rounded-lg bg-chip p-2 text-sm text-accent">Note: {o.note}</li>}
+              </ul>
+
+              {/* Footer: total + actions */}
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-3 border-t border-line px-4 py-3.5">
+                <div className="mr-auto min-w-0 pr-2">
+                  <div className="text-xl font-bold tabular-nums">{money(o.total)}</div>
+                  <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
+                </div>
+                {/* One-way switch: Unpaid -> Paid. Once Paid it is locked (disabled), same size, so nothing shifts. */}
+                <button
+                  type="button"
+                  onClick={() => markPaid(o)}
+                  disabled={isPaid(o)}
+                  aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
+                  className={`${act} w-28 flex-none transition-colors ${
+                    isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'
+                  }`}
+                >
+                  {isPaid(o) && <Icon name="check" size={16} />}
+                  {isPaid(o) ? 'Paid' : 'Mark paid'}
                 </button>
-              )}
-              <div className="flex w-full gap-2 sm:w-auto">
-                <button onClick={() => setEditing(o)} className={`${act} flex-1 bg-chip sm:flex-none`}>Edit</button>
-                <button onClick={() => remove(o)} className={`${act} flex-1 bg-chip text-red-600 sm:flex-none`}>Delete</button>
+                <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={iconBtn}>
+                  <Icon name="edit" size={18} />
+                </button>
+                <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${iconBtn} hover:text-red-600`}>
+                  <Icon name="trash" size={18} />
+                </button>
+                {!done && (
+                  <button
+                    type="button"
+                    onClick={() => patch(o.id, { status: 'completed' })}
+                    className={`${act} basis-full border border-accent text-accent hover:bg-okbg`}
+                  >
+                    <Icon name="check" size={16} /> Mark Completed
+                  </button>
+                )}
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       {editing && (

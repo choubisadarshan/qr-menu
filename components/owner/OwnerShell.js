@@ -200,7 +200,7 @@ function NavItems({ tab, onSelect, badge, compact }) {
   );
 }
 
-function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
+function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut, onToggle }) {
   return (
     <div className="flex h-full flex-col gap-4 p-3">
       <div className={compact ? 'flex justify-center pt-1' : 'px-1 pt-1'}>
@@ -213,6 +213,22 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
       <div className="mt-auto space-y-2">
         <CafeOpenToggle compact={compact} />
         <HelpCard compact={compact} />
+        {/* Theme + (desktop) collapse live here now that there is no top bar */}
+        <div className={`flex items-center gap-2 ${compact ? 'flex-col' : 'justify-between px-1'}`}>
+          <ThemeToggle />
+          {onToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!compact}
+              title={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="hidden h-10 w-10 flex-none place-items-center rounded-md bg-chip hover:bg-line lg:grid"
+            >
+              <Icon name={compact ? 'chevronRight' : 'panelLeft'} />
+            </button>
+          )}
+        </div>
         <div className="border-t border-line pt-2">
           <UserMenu email={email} onSignOut={onSignOut} compact={compact} />
         </div>
@@ -254,56 +270,23 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
         aria-label="Sidebar"
         className={`sticky top-0 hidden h-dvh flex-none border-r border-line bg-card transition-[width] duration-200 lg:block ${collapsed ? 'w-[4.75rem]' : 'w-64'}`}
       >
-        <SidebarBody tab={tab} onSelect={select} badge={badge} compact={collapsed} email={email} onSignOut={onSignOut} />
+        <SidebarBody tab={tab} onSelect={select} badge={badge} compact={collapsed} email={email} onSignOut={onSignOut} onToggle={toggleCollapsed} />
       </aside>
 
       <div className="min-w-0 flex-1">
-        {/* Top bar: menu button + the Orders | Analytics | Menu tab switcher (always visible) */}
-        <header className="sticky top-0 z-20 border-b border-line bg-bg/90 px-3 py-2.5 backdrop-blur sm:px-6">
-          <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setDrawer(true)}
-              aria-label="Open menu"
-              className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card lg:hidden"
-            >
-              <Icon name="hamburger" />
-            </button>
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              aria-expanded={!collapsed}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card hover:bg-chip lg:grid"
-            >
-              <Icon name={collapsed ? 'chevronRight' : 'panelLeft'} />
-            </button>
+        {/* Phones: no top bar. A small floating button opens the menu; desktop uses the sidebar. */}
+        <button
+          type="button"
+          onClick={() => setDrawer(true)}
+          aria-label="Open menu"
+          className="fixed left-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full border border-edge bg-card shadow-soft lg:hidden"
+          style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <Icon name="hamburger" />
+          {badge > 0 && <span aria-hidden="true" className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-card" />}
+        </button>
 
-            <div role="tablist" aria-label="Sections" className="flex min-w-0 flex-1 gap-1 rounded-xl border border-edge bg-chip p-1 sm:max-w-md sm:flex-none">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  role="tab"
-                  aria-selected={tab === t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors sm:flex-none sm:px-5 ${tab === t.id ? 'border-ok/30 bg-okbg text-ok shadow-card' : 'border-transparent text-muted hover:bg-card/70 hover:text-ink'}`}
-                >
-                  {t.id}
-                  {t.id === 'Orders' && badge > 0 && (
-                    <span className="rounded-full bg-accent px-1.5 text-[11px] font-bold leading-5 text-on-accent">{badge > 99 ? '99+' : badge}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="ml-auto flex-none">
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-6">{children}</main>
+        <main className="mx-auto max-w-6xl px-3 pb-6 pt-[4.5rem] sm:px-6 lg:py-8">{children}</main>
       </div>
 
       {/* Mobile: bottom drawer */}

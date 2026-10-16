@@ -37,6 +37,8 @@ const PATHS = {
   volume: <><path d="M11 5 6 9H2v6h4l5 4Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></>,
   volumeOff: <><path d="M11 5 6 9H2v6h4l5 4Z" /><path d="m22 9-6 6M16 9l6 6" /></>,
   calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
+  phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
   sliders: <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></>,
 };
 
@@ -103,36 +105,38 @@ export function PageHeader({ title, subtitle, children }) {
   );
 }
 
-// Filter tabs, e.g. All | Received | Completed. options: [{ value, label, count? }]
-// One row that scrolls sideways on every screen size (never wraps onto a second line).
-// The scroller itself has no side padding, so pills slide cleanly under the rounded edge with no gap;
-// the breathing room at the start/end comes from margins on the first/last pill instead.
+// Filter chips, e.g. All | Received | Completed. options: [{ value, label, count? }]
+// Same pill look as the Menu category filter. One row that scrolls sideways on every screen size and
+// runs edge-to-edge on phones (negative margin = the page padding), so there is never a gap while scrolling.
 export function Tabs({ value, onChange, options, ariaLabel }) {
   return (
     <div
       role="group"
       aria-label={ariaLabel}
-      className="no-scrollbar flex w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain rounded-xl border border-edge bg-chip py-1.5 [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] sm:w-fit sm:max-w-full [&>*:first-child]:ml-1.5 [&>*:last-child]:mr-1.5"
+      className="no-scrollbar -mx-3 flex min-w-0 flex-nowrap gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 [-webkit-overflow-scrolling:touch] sm:-mx-1 sm:px-1"
     >
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={(e) => {
-            onChange(o.value);
-            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-          }}
-          aria-pressed={value === o.value}
-          className={`flex flex-none snap-start items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
-            value === o.value ? 'border-ok/30 bg-okbg text-ok shadow-card' : 'border-transparent text-muted hover:bg-card/70 hover:text-ink'
-          }`}
-        >
-          {o.label}
-          {o.count != null && (
-            <span className={`rounded-full px-1.5 text-xs tabular-nums ${value === o.value ? 'bg-card text-ok' : 'bg-card/80 text-muted'}`}>{o.count}</span>
-          )}
-        </button>
-      ))}
+      {options.map((o) => {
+        const on = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={(e) => {
+              onChange(o.value);
+              e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }}
+            aria-pressed={on}
+            className={`flex flex-none items-center gap-2 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
+              on ? 'border-accent bg-accent text-on-accent' : 'border-edge bg-card text-muted hover:text-ink'
+            }`}
+          >
+            {o.label}
+            {o.count != null && (
+              <span className={`min-w-5 rounded-full px-1.5 text-center text-xs tabular-nums ${on ? 'bg-white/20 text-on-accent' : 'bg-chip text-muted'}`}>{o.count}</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

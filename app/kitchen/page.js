@@ -28,7 +28,7 @@ function Stat({ icon, tone, label, value, sub }) {
   const [first, ...rest] = label.split(' '); // phones show just the first word ("Total", "New", "Completed")
   return (
     <div className="flex min-w-0 flex-col gap-2 rounded-2xl border border-edge bg-card p-3 shadow-card sm:flex-row sm:items-center sm:gap-4 sm:p-4">
-      <span className={`grid h-9 w-9 flex-none place-items-center rounded-xl sm:h-11 sm:w-11 ${TONES[tone]}`}>
+      <span className={`hidden h-11 w-11 flex-none place-items-center rounded-xl sm:grid ${TONES[tone]}`}>
         <Icon name={icon} size={18} />
       </span>
       <div className="min-w-0 leading-tight">

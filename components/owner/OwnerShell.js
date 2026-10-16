@@ -200,7 +200,7 @@ function NavItems({ tab, onSelect, badge, compact }) {
   );
 }
 
-function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut, onToggle }) {
+function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
   return (
     <div className="flex h-full flex-col gap-4 p-3">
       <div className={compact ? 'flex justify-center pt-1' : 'px-1 pt-1'}>
@@ -213,22 +213,6 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut, onToggle
       <div className="mt-auto space-y-2">
         <CafeOpenToggle compact={compact} />
         <HelpCard compact={compact} />
-        {/* Theme + (desktop) collapse live here now that there is no top bar */}
-        <div className={`flex items-center gap-2 ${compact ? 'flex-col' : 'justify-between px-1'}`}>
-          <ThemeToggle />
-          {onToggle && (
-            <button
-              type="button"
-              onClick={onToggle}
-              aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
-              aria-expanded={!compact}
-              title={compact ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="hidden h-10 w-10 flex-none place-items-center rounded-md bg-chip hover:bg-line lg:grid"
-            >
-              <Icon name={compact ? 'chevronRight' : 'panelLeft'} />
-            </button>
-          )}
-        </div>
         <div className="border-t border-line pt-2">
           <UserMenu email={email} onSignOut={onSignOut} compact={compact} />
         </div>
@@ -237,9 +221,12 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut, onToggle
   );
 }
 
+const today = () => new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
 export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, children }) {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
+  const [date] = useState(today); // this screen only renders after sign-in, so no server/client mismatch
   useScrollLock(drawer);
 
   useEffect(() => {
@@ -270,23 +257,48 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
         aria-label="Sidebar"
         className={`sticky top-0 hidden h-dvh flex-none border-r border-line bg-card transition-[width] duration-200 lg:block ${collapsed ? 'w-[4.75rem]' : 'w-64'}`}
       >
-        <SidebarBody tab={tab} onSelect={select} badge={badge} compact={collapsed} email={email} onSignOut={onSignOut} onToggle={toggleCollapsed} />
+        <SidebarBody tab={tab} onSelect={select} badge={badge} compact={collapsed} email={email} onSignOut={onSignOut} />
       </aside>
 
       <div className="min-w-0 flex-1">
-        {/* Phones: no top bar. A small floating button opens the menu; desktop uses the sidebar. */}
-        <button
-          type="button"
-          onClick={() => setDrawer(true)}
-          aria-label="Open menu"
-          className="fixed left-3 top-3 z-20 grid h-11 w-11 place-items-center rounded-full border border-edge bg-card shadow-soft lg:hidden"
-          style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
-        >
-          <Icon name="hamburger" />
-          {badge > 0 && <span aria-hidden="true" className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-card" />}
-        </button>
+        <header className="sticky top-0 z-20 border-b border-line bg-bg/90 px-3 py-2.5 backdrop-blur sm:px-6">
+          <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setDrawer(true)}
+              aria-label="Open menu"
+              className="relative grid h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card lg:hidden"
+            >
+              <Icon name="hamburger" />
+              {badge > 0 && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />}
+            </button>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card hover:bg-chip lg:grid"
+            >
+              <Icon name={collapsed ? 'chevronRight' : 'panelLeft'} />
+            </button>
 
-        <main className="mx-auto max-w-6xl px-3 pb-6 pt-[4.5rem] sm:px-6 lg:py-8">{children}</main>
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+              <span className="hidden text-muted sm:inline">Workspace</span>
+              <Icon name="chevronRight" size={14} className="hidden text-muted sm:block" />
+              <span className="truncate font-semibold">{tab}</span>
+            </nav>
+
+            <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
+              <span className="hidden items-center gap-2 text-sm text-muted md:flex">
+                <Icon name="calendar" size={16} /> {date}
+              </span>
+              <ThemeToggle />
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-6">{children}</main>
       </div>
 
       {/* Mobile: bottom drawer */}

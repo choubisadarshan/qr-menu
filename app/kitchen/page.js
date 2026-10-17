@@ -7,6 +7,8 @@ import { money } from '@/lib/config';
 import { clock, dateTime } from '@/lib/time';
 import { tableLabel } from '@/lib/orderType';
 import KitchenShell from '@/components/kitchen/KitchenShell';
+import RangePicker from '@/components/kitchen/RangePicker';
+import { initialRange, rangeBounds, rangeWord } from '@/lib/dateRange';
 import { PageHeader, SearchBox, StatusPill, Icon } from '@/components/owner/ui';
 
 const STRIP = {
@@ -43,12 +45,14 @@ function Stat({ icon, tone, label, value, sub }) {
   );
 }
 
+const waited = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`);
 const itemCount = (o) => o.order_items.reduce((a, i) => a + Number(i.quantity || 0), 0);
 
 export default function KitchenPage() {
   const router = useRouter();
   const { loading, email } = useStaff(['kitchen', 'owner'], '/kitchen/login');
-  const [orders, setOrders] = useState([]); // everything placed today
+  const [orders, setOrders] = useState([]); // everything placed in the chosen range
+  const [range, setRange] = useState(initialRange);
   const [tab, setTab] = useState('Kitchen'); // 'Kitchen' | 'Order history'
   const [search, setSearch] = useState('');
   const [soundOn, setSoundOn] = useState(false);
@@ -56,16 +60,14 @@ export default function KitchenPage() {
   const audio = useRef(null);
   const soundRef = useRef(false);
 
+  const { key: rKey, from: rFrom, to: rTo } = range;
   const load = useCallback(async () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const { data } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .gte('created_at', start.toISOString())
-      .order('created_at');
+    const { gte, lt } = rangeBounds({ key: rKey, from: rFrom, to: rTo });
+    let q = supabase.from('orders').select('*, order_items(*)').gte('created_at', gte);
+    if (lt) q = q.lt('created_at', lt);
+    const { data } = await q.order('created_at');
     setOrders(data || []);
-  }, []);
+  }, [rKey, rFrom, rTo]);
 
   // Keep the tablet screen awake
   useEffect(() => {
@@ -152,10 +154,10 @@ export default function KitchenPage() {
   const isKitchen = tab === 'Kitchen';
 
   return (
-    <KitchenShell tab={tab} setTab={setTab} badge={active.length} email={email} onSignOut={() => signOut(router, '/kitchen/login')}>
+    <KitchenShell tab={tab} setTab={setTab} badge={range.key === 'today' ? active.length : 0} email={email} onSignOut={() => signOut(router, '/kitchen/login')}>
       <PageHeader
         title={isKitchen ? 'Kitchen' : 'Order history'}
-        subtitle={isKitchen ? 'A little care in every order. Let’s get cooking.' : 'A look back at every order served today.'}
+        subtitle={isKitchen ? 'A little care in every order. Let’s get cooking.' : `A look back at every order served ${rangeWord(range)}.`}
       >
         <button
           type="button"
@@ -169,12 +171,15 @@ export default function KitchenPage() {
       </PageHeader>
 
       <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
-        <Stat icon="orders" tone="plain" label="Total orders" value={orders.length} sub="Placed today" />
+        <Stat icon="orders" tone="plain" label="Total orders" value={orders.length} sub={`Placed ${rangeWord(range)}`} />
         <Stat icon="bell" tone="warn" label="New orders" value={active.length} sub="Waiting to be completed" />
-        <Stat icon="check" tone="ok" label="Completed orders" value={done.length} sub="Finished today" />
+        <Stat icon="check" tone="ok" label="Completed orders" value={done.length} sub={`Finished ${rangeWord(range)}`} />
       </div>
 
-      <SearchBox value={search} onChange={setSearch} placeholder="Search by order, table or item" className="mb-5 sm:max-w-sm" />
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <SearchBox value={search} onChange={setSearch} placeholder="Search by order, table or item" className="w-full sm:max-w-sm sm:flex-1" />
+        <RangePicker value={range} onChange={setRange} />
+      </div>
 
       {isKitchen ? (
         <>
@@ -201,7 +206,7 @@ export default function KitchenPage() {
                     <div className="flex-none text-right">
                       <span className="rounded-md bg-chip px-3 py-1 text-xs font-semibold capitalize">{o.status}</span>
                       <div className={`mt-1 text-sm font-semibold ${mins >= 15 ? 'text-accent' : 'text-muted'}`}>
-                        {mins} min
+                        {waited(mins)}
                       </div>
                     </div>
                   </div>
@@ -241,7 +246,7 @@ export default function KitchenPage() {
         <>
           {doneShown.length === 0 && (
             <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
-              {q ? 'No orders match your search.' : 'No completed orders yet today.'}
+              {q ? 'No orders match your search.' : `No completed orders ${rangeWord(range)}.`}
             </p>
           )}
 

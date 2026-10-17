@@ -20,6 +20,8 @@ const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-fu
 const iconBtn = 'grid h-11 w-11 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
 const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
+const isRecent = (iso) => Date.now() - new Date(iso).getTime() < TWELVE_HOURS;
+
 const phoneOf = (o) => {
   const c = o.order_contacts;
   return (Array.isArray(c) ? c[0]?.phone : c?.phone) || '';
@@ -31,6 +33,13 @@ export default function OwnerOrders() {
   const [range, setRange] = useState('today');
   const [filter, setFilter] = useState('all'); // all | received | completed
   const [search, setSearch] = useState('');
+  const [view, setView] = useState(() => {
+    try {
+      return localStorage.getItem('owner-orders-view') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
   const [editing, setEditing] = useState(null); // null | 'new' | an order
   const [error, setError] = useState('');
   const [searchOpen, setSearchOpen] = useState(false); // phone: search field is expanded
@@ -143,6 +152,19 @@ export default function OwnerOrders() {
   const sum = (list) => list.reduce((a, o) => a + Number(o.total), 0);
   const collected = sum(paidOrders);
   const notCollected = sum(unpaidOrders);
+  const filterOptions = [
+    { value: 'all', label: 'All', count: orders.length },
+    { value: 'received', label: 'Received', count: received.length },
+    { value: 'completed', label: 'Completed', count: completed.length },
+    { value: 'collected', label: 'Collected', count: paidOrders.length },
+    { value: 'uncollected', label: 'Not collected', count: unpaidOrders.length },
+  ];
+  const chooseView = (v) => {
+    setView(v);
+    try {
+      localStorage.setItem('owner-orders-view', v);
+    } catch {}
+  };
   const rangeNote = range === 'today' ? 'Today' : range === 'week' ? 'Last 7 days' : 'All time';
 
   return (
@@ -166,20 +188,15 @@ export default function OwnerOrders() {
         <MoneyStat label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
-      <div className="mb-5 flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
-        <Tabs
-          ariaLabel="Order queue filter"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: 'all', label: 'All', count: orders.length },
-            { value: 'received', label: 'Received', count: received.length },
-            { value: 'completed', label: 'Completed', count: completed.length },
-            { value: 'collected', label: 'Collected', count: paidOrders.length },
-            { value: 'uncollected', label: 'Not collected', count: unpaidOrders.length },
-          ]}
-        />
-        <div className="flex items-center gap-2 2xl:ml-auto">
+      <div className="mb-5 flex flex-col gap-4">
+        {/* Phones and tablets: chips that scroll sideways. Desktop uses the dropdown in the row below. */}
+        <div className="lg:hidden">
+          <Tabs ariaLabel="Order queue filter" value={filter} onChange={setFilter} options={filterOptions} />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="hidden flex-none lg:block">
+            <Dropdown variant="pill" align="left" value={filter} onChange={setFilter} options={filterOptions} ariaLabel="Order filter" />
+          </div>
           {/* Phone: the search field grows while the other controls slide out of its way, then slide back. */}
           <SearchBox
             ref={searchRef}
@@ -189,7 +206,7 @@ export default function OwnerOrders() {
             onFocus={openSearch}
             onBlur={closeSearch}
             placeholder="Search name, table or dish"
-            className={`min-w-0 flex-1 transition-shadow ${EASE} 2xl:w-72 2xl:flex-none ${searchOpen ? 'max-md:shadow-soft' : ''}`}
+            className={`min-w-0 flex-1 transition-shadow ${EASE} ${searchOpen ? 'max-md:shadow-soft' : ''}`}
           />
           <div
             className={`flex flex-none items-center gap-2 transition-[max-width,opacity] ${EASE} md:max-w-none md:opacity-100 ${
@@ -198,6 +215,24 @@ export default function OwnerOrders() {
             aria-hidden={searchOpen ? 'true' : undefined}
           >
             <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
+            <div role="group" aria-label="Card layout" className="hidden flex-none items-center gap-0.5 rounded-lg border border-edge bg-card p-0.5 md:flex">
+              {[
+                ['grid', 'Grid view'],
+                ['list', 'List view'],
+              ].map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => chooseView(v)}
+                  aria-pressed={view === v}
+                  aria-label={label}
+                  title={label}
+                  className={`grid h-9 w-9 place-items-center rounded-md transition-colors ${view === v ? 'bg-accent text-on-accent' : 'text-muted hover:bg-chip hover:text-ink'}`}
+                >
+                  <Icon name={v} size={16} />
+                </button>
+              ))}
+            </div>
             <button onClick={() => setEditing('new')} className={`${btn} flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap bg-accent text-on-accent hover:bg-accent-hover md:min-h-0`}>
               <Icon name="plus" size={16} /> New order
             </button>
@@ -212,11 +247,82 @@ export default function OwnerOrders() {
         </p>
       )}
 
+      {view === 'list' ? (
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
+          {shown.map((o) => {
+            const phone = phoneOf(o);
+            const created = new Date(o.created_at).getTime();
+            const recent = isRecent(o.created_at);
+            const done = o.status === 'completed';
+            const takeaway = isTakeaway(o.table_number);
+            const summary = o.order_items.map((i) => `${i.quantity}× ${i.item_name}`).join(', ');
+            return (
+              <li key={o.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
+                <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
+                  <div className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-accent text-on-accent">
+                    <div className="text-center leading-none">
+                      <div className="text-[8px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
+                      <div className={`mt-0.5 font-bold ${takeaway ? 'text-xs' : 'text-lg'}`}>{takeaway ? 'away' : o.table_number}</div>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">Order #{o.id}</div>
+                    <div className="truncate text-xs text-muted">
+                      {o.customer_name} · {recent ? clock(o.created_at) : dateTime(o.created_at)}
+                      {done && o.completed_at && ` · Done ${recent ? clock(o.completed_at) : dateTime(o.completed_at)}`}
+                      {phone && ` · ${phone}`}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex-[2] basis-60 text-sm">
+                  <p className="truncate" title={summary}>{summary}</p>
+                  {o.note && <p className="truncate text-xs text-accent">Note: {o.note}</p>}
+                </div>
+
+                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-start rounded-full px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
+                  <Icon name={done ? 'check' : 'clock'} size={13} />
+                  {done ? 'Completed' : 'Received'}
+                </span>
+
+                <div className="w-24 flex-none text-right xl:w-auto">
+                  <div className="font-bold tabular-nums">{money(o.total)}</div>
+                  <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
+                </div>
+
+                <div className="ml-auto flex flex-none items-center gap-1 xl:ml-0 xl:justify-end">
+                  {!done && (
+                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${act} border border-accent text-accent hover:bg-okbg`}>
+                      <Icon name="check" size={16} /> Complete
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => markPaid(o)}
+                    disabled={isPaid(o)}
+                    aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
+                    className={`${act} w-28 flex-none transition-colors ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
+                  >
+                    {isPaid(o) && <Icon name="check" size={16} />}
+                    {isPaid(o) ? 'Paid' : 'Mark paid'}
+                  </button>
+                  <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={iconBtn}>
+                    <Icon name="edit" size={18} />
+                  </button>
+                  <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${iconBtn} hover:text-red-600`}>
+                    <Icon name="trash" size={18} />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {shown.map((o) => {
           const phone = phoneOf(o);
           const created = new Date(o.created_at).getTime();
-          const recent = Date.now() - created < TWELVE_HOURS;
+          const recent = isRecent(o.created_at);
           const done = o.status === 'completed';
           const takeaway = isTakeaway(o.table_number);
           return (
@@ -332,6 +438,7 @@ export default function OwnerOrders() {
           );
         })}
       </div>
+      )}
 
       {editing && (
         <OrderForm

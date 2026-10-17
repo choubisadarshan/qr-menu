@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/Dropdown';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
@@ -572,7 +573,7 @@ export default function OwnerMenu() {
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Category filter">
+        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden" role="group" aria-label="Category filter">
           {['all', ...categories].map((c) => (
             <button
               key={c}
@@ -583,6 +584,20 @@ export default function OwnerMenu() {
               {c === 'all' ? 'All' : c}
             </button>
           ))}
+        </div>
+        {/* Desktop: the categories live in a dropdown (phones keep the chips above) */}
+        <div className="hidden flex-none lg:block">
+          <Dropdown
+            variant="pill"
+            align="left"
+            value={cat}
+            onChange={setCat}
+            ariaLabel="Category filter"
+            options={[
+              { value: 'all', label: 'All', count: items.length },
+              ...categories.map((c) => ({ value: c, label: c, count: items.filter((m) => (m.category || 'Other') === c).length })),
+            ]}
+          />
         </div>
         <SearchBox value={search} onChange={setSearch} placeholder="Search dishes" className="lg:ml-auto lg:w-72" />
       </div>

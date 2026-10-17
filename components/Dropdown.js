@@ -17,7 +17,7 @@ function Chevron({ open }) {
 
 /**
  * Custom dropdown (replaces the plain <select>).
- * options: [{ value, label, dot? }]   dot = a Tailwind bg class, e.g. "bg-ok"
+ * options: [{ value, label, dot?, count? }]   dot = a Tailwind bg class, e.g. "bg-ok"; count = small number badge
  * variant: 'pill' (small, for cards) | 'field' (full width, for forms)
  * align:   'left' | 'right'  (which edge the menu lines up with)
  */
@@ -131,6 +131,7 @@ export default function Dropdown({
         <span className="flex min-w-0 items-center gap-2">
           {current?.dot && <span className={`h-2.5 w-2.5 flex-none rounded-full ${current.dot}`} />}
           <span className={`truncate ${current ? '' : 'text-muted'}`}>{current ? current.label : placeholder}</span>
+          {current?.count != null && <span className="flex-none rounded-full bg-chip px-1.5 text-xs tabular-nums text-muted">{current.count}</span>}
         </span>
         <Chevron open={open} />
       </button>
@@ -160,6 +161,7 @@ export default function Dropdown({
                   {o.dot && <span className={`h-2.5 w-2.5 flex-none rounded-full ${o.dot}`} />}
                   <span className="truncate">{o.label}</span>
                 </span>
+                {o.count != null && <span className="ml-auto flex-none rounded-full bg-chip px-1.5 text-xs font-semibold tabular-nums text-muted">{o.count}</span>}
                 {selected && (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
                     <path d="m5 12 5 5L20 7" />

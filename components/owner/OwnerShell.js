@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CONFIG } from '@/lib/config';
 import { useInstall } from '@/lib/useInstall';
 import { useScrollLock } from '@/lib/useScrollLock';
@@ -221,12 +221,13 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
   );
 }
 
+const noopSubscribe = () => () => {};
 const today = () => new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, children }) {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
-  const [date] = useState(today); // this screen only renders after sign-in, so no server/client mismatch
+  const date = useSyncExternalStore(noopSubscribe, today, () => ''); // '' while pre-rendering, today's date in the browser
   useScrollLock(drawer);
 
   useEffect(() => {
@@ -304,7 +305,7 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
       {/* Mobile: bottom drawer */}
       {drawer && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="absolute inset-0 bg-black/45" />
+          <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" />
           <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-3xl bg-card shadow-sheet">
             <div className="flex justify-center pt-2">
               <span className="h-1.5 w-10 rounded-full bg-line" />

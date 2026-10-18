@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const VARIANT = {
-  pill: 'inline-flex min-w-36 items-center justify-between gap-2 rounded-lg border border-edge bg-card px-4 py-2 text-sm font-semibold hover:bg-chip',
+  pill: 'inline-flex h-10 min-w-36 items-center justify-between gap-2 rounded-lg border border-edge bg-card px-4 text-sm font-semibold hover:bg-chip',
   field: 'flex w-full items-center justify-between gap-2 rounded-xl border border-edge bg-card p-3 text-left hover:bg-chip',
 };
 

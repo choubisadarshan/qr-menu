@@ -155,6 +155,11 @@ button:not(:disabled) {
   outline-offset: 2px;
 }
 
+/* Search fields draw their own thin focus border; the big outline on top made it look thick */
+input[type='search']:focus-visible {
+  outline: none;
+}
+
 ::selection {
   background: var(--accent);
   color: var(--on-accent);
@@ -173,12 +178,11 @@ button:not(:disabled) {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
-/* Dialog open animation: dimmed + blurred page behind, the sheet slides up (phone) or in from the right (desktop) */
+/* Dialog open animation: dark, softly blurred page behind (same look as the customization drawer), the sheet slides up (phone) or in from the right (desktop) */
 .scrim {
-  background: rgba(125, 135, 130, 0.38);
-  background: color-mix(in srgb, color-mix(in srgb, var(--bg) 82%, var(--ink)) 60%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   overscroll-behavior: contain;
 }
 @keyframes scrim-in {

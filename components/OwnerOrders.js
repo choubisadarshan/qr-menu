@@ -17,6 +17,7 @@ const RANGE_OPTIONS = [
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
 // Card action buttons: 44px touch target on phones, compact on desktop.
 const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold sm:min-h-9';
+const listIconBtn = 'grid h-10 w-10 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
 const iconBtn = 'grid h-11 w-11 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
 const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
@@ -165,6 +166,27 @@ export default function OwnerOrders() {
       localStorage.setItem('owner-orders-view', v);
     } catch {}
   };
+  // Grid / list switch. Desktop: in the toolbar. Phones: on its own row above the orders (never inside a scrolling row).
+  const viewToggle = (cls) => (
+    <div role="group" aria-label="Card layout" className={`${cls} flex-none items-center gap-0.5 rounded-lg border border-edge bg-card p-0.5`}>
+      {[
+        ['grid', 'Grid view'],
+        ['list', 'List view'],
+      ].map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => chooseView(v)}
+          aria-pressed={view === v}
+          aria-label={label}
+          title={label}
+          className={`grid h-9 w-9 place-items-center rounded-md transition-colors ${view === v ? 'bg-accent text-on-accent' : 'text-muted hover:bg-chip hover:text-ink'}`}
+        >
+          <Icon name={v} size={16} />
+        </button>
+      ))}
+    </div>
+  );
   const rangeNote = range === 'today' ? 'Today' : range === 'week' ? 'Last 7 days' : 'All time';
 
   return (
@@ -215,25 +237,8 @@ export default function OwnerOrders() {
             aria-hidden={searchOpen ? 'true' : undefined}
           >
             <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
-            <div role="group" aria-label="Card layout" className="hidden flex-none items-center gap-0.5 rounded-lg border border-edge bg-card p-0.5 md:flex">
-              {[
-                ['grid', 'Grid view'],
-                ['list', 'List view'],
-              ].map(([v, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => chooseView(v)}
-                  aria-pressed={view === v}
-                  aria-label={label}
-                  title={label}
-                  className={`grid h-9 w-9 place-items-center rounded-md transition-colors ${view === v ? 'bg-accent text-on-accent' : 'text-muted hover:bg-chip hover:text-ink'}`}
-                >
-                  <Icon name={v} size={16} />
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setEditing('new')} className={`${btn} flex min-h-11 flex-none items-center gap-1.5 whitespace-nowrap bg-accent text-on-accent hover:bg-accent-hover md:min-h-0`}>
+            {viewToggle('hidden md:flex')}
+            <button onClick={() => setEditing('new')} className={`${btn} flex h-10 flex-none items-center gap-1.5 whitespace-nowrap bg-accent py-0 text-on-accent hover:bg-accent-hover`}>
               <Icon name="plus" size={16} /> New order
             </button>
           </div>
@@ -247,6 +252,15 @@ export default function OwnerOrders() {
         </p>
       )}
 
+      {shown.length > 0 && (
+        <div className="mb-3 flex items-center justify-between md:hidden">
+          <span className="text-sm text-muted">
+            {shown.length} order{shown.length === 1 ? '' : 's'}
+          </span>
+          {viewToggle('flex')}
+        </div>
+      )}
+
       {view === 'list' ? (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
           {shown.map((o) => {
@@ -257,8 +271,8 @@ export default function OwnerOrders() {
             const takeaway = isTakeaway(o.table_number);
             const summary = o.order_items.map((i) => `${i.quantity}× ${i.item_name}`).join(', ');
             return (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
-                <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
+              <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-3 py-3 sm:px-4 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
+                <div className="flex min-w-0 items-center gap-3 max-md:col-span-2 max-md:col-start-1 max-md:row-start-1 max-md:pr-[5.75rem] md:flex-1 md:basis-56">
                   <div className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-accent text-on-accent">
                     <div className="text-center leading-none">
                       <div className="text-[8px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
@@ -275,25 +289,25 @@ export default function OwnerOrders() {
                   </div>
                 </div>
 
-                <div className="min-w-0 flex-[2] basis-60 text-sm">
+                <div className="min-w-0 text-sm max-md:col-span-2 max-md:row-start-2 md:flex-[2] md:basis-60">
                   <p className="truncate" title={summary}>{summary}</p>
                   {o.note && <p className="truncate text-xs text-accent">Note: {o.note}</p>}
                 </div>
 
-                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-start rounded-full px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
-                  <Icon name={done ? 'check' : 'clock'} size={13} />
+                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-end rounded-full max-md:col-start-2 max-md:row-start-1 xl:justify-self-start px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
+                  <Icon name={done ? 'check' : 'clock'} size={13} className="max-sm:hidden" />
                   {done ? 'Completed' : 'Received'}
                 </span>
 
-                <div className="w-24 flex-none text-right xl:w-auto">
+                <div className="min-w-0 text-left max-md:col-start-1 max-md:row-start-3 md:w-24 md:flex-none md:text-right xl:w-auto">
                   <div className="font-bold tabular-nums">{money(o.total)}</div>
                   <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
                 </div>
 
-                <div className="ml-auto flex flex-none items-center gap-1 xl:ml-0 xl:justify-end">
+                <div className="flex flex-none items-center justify-self-end gap-1 max-md:col-start-2 max-md:row-start-3 md:ml-auto xl:ml-0 xl:justify-end">
                   {!done && (
-                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${act} border border-accent text-accent hover:bg-okbg`}>
-                      <Icon name="check" size={16} /> Complete
+                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${act} border border-accent text-accent hover:bg-okbg max-sm:w-11 max-sm:px-0`}>
+                      <Icon name="check" size={16} /> <span className="max-sm:hidden">Complete</span>
                     </button>
                   )}
                   <button
@@ -301,15 +315,15 @@ export default function OwnerOrders() {
                     onClick={() => markPaid(o)}
                     disabled={isPaid(o)}
                     aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
-                    className={`${act} w-28 flex-none transition-colors ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
+                    className={`${act} w-[5.5rem] flex-none px-2 transition-colors sm:w-28 ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
                   >
                     {isPaid(o) && <Icon name="check" size={16} />}
                     {isPaid(o) ? 'Paid' : 'Mark paid'}
                   </button>
-                  <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={iconBtn}>
+                  <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={listIconBtn}>
                     <Icon name="edit" size={18} />
                   </button>
-                  <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${iconBtn} hover:text-red-600`}>
+                  <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${listIconBtn} hover:text-red-600`}>
                     <Icon name="trash" size={18} />
                   </button>
                 </div>

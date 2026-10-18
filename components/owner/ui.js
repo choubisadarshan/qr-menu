@@ -158,7 +158,7 @@ export function SearchBox({ value, onChange, placeholder, className = '', ref, i
         onBlur={onBlur}
         onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-edge bg-card py-2.5 pl-9 pr-3 text-base outline-none transition-shadow duration-300 focus:ring-2 focus:ring-accent md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-10 w-full rounded-xl border border-edge bg-card py-0 pl-9 pr-3 text-base outline-none transition-[border-color,box-shadow] duration-300 focus:border-accent focus:ring-1 focus:ring-accent/40 md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
       />
     </label>
   );

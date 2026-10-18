@@ -403,15 +403,18 @@ function OptionsDrawer({ dish, options, onToggle, onEdit, onClose }) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-end transition-[background-color,backdrop-filter] duration-300 ease-out ${shown ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0'}`}
+      className={`fixed inset-0 z-50 flex items-end justify-center transition-[background-color,backdrop-filter] duration-300 ease-out lg:items-stretch lg:justify-end ${shown ? 'bg-black/40 backdrop-blur-[3px]' : 'bg-black/0'}`}
       {...dismiss}
       role="dialog"
       aria-modal="true"
       aria-label={`${dish.name} customizations`}
     >
       <aside
-        className={`flex h-full w-full max-w-md flex-col border-l border-edge bg-card shadow-sheet transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${shown ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-3xl border-t border-edge bg-card shadow-sheet transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none lg:h-full lg:max-h-none lg:max-w-md lg:rounded-none lg:border-l lg:border-t-0 ${shown ? 'translate-y-0 lg:translate-x-0' : 'translate-y-full lg:translate-x-full lg:translate-y-0'}`}
       >
+        <div className="flex justify-center pt-2 lg:hidden">
+          <span className="h-1.5 w-10 rounded-full bg-line" />
+        </div>
         <div className="flex items-start gap-3 border-b border-line px-4 py-4">
           <span aria-hidden="true" className="grid h-11 w-11 flex-none place-items-center overflow-hidden rounded-xl bg-chip text-2xl">
             {dish.image_url ? (

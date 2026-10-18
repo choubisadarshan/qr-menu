@@ -22,6 +22,7 @@ const readCollapsed = () => {
 };
 
 const noopSubscribe = () => () => {};
+const todayShort = () => new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 const today = () => new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 function NavItems({ tab, onSelect, badge, compact }) {
@@ -72,6 +73,7 @@ function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
 export default function KitchenShell({ tab, setTab, badge = 0, email, onSignOut, children }) {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
+  const dateShort = useSyncExternalStore(noopSubscribe, todayShort, () => '');
   const date = useSyncExternalStore(noopSubscribe, today, () => ''); // '' while pre-rendering, today's date in the browser
   useScrollLock(drawer);
 
@@ -137,9 +139,14 @@ export default function KitchenShell({ tab, setTab, badge = 0, email, onSignOut,
 
             <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
               {date && (
-                <span className="hidden items-center gap-2 text-sm text-muted md:flex">
-                  <Icon name="calendar" size={16} /> {date}
-                </span>
+                <>
+                  <span className="hidden items-center gap-2 text-sm text-muted md:flex">
+                    <Icon name="calendar" size={16} /> {date}
+                  </span>
+                  <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted md:hidden">
+                    <Icon name="calendar" size={14} /> {dateShort}
+                  </span>
+                </>
               )}
               <ThemeToggle />
             </div>

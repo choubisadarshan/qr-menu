@@ -127,9 +127,14 @@ html {
   scrollbar-gutter: stable;
 }
 /* While a dialog or sheet is open, only the dialog scrolls (see lib/useScrollLock.js) */
-html.scroll-locked,
-html.scroll-locked body {
+html.scroll-locked {
   overflow: hidden;
+  overscroll-behavior: none;
+}
+/* `clip` (not `hidden`) on body: hidden would turn body into a scroll container and the sticky sidebar would
+   scroll away with the page while a dialog is open. */
+html.scroll-locked body {
+  overflow: clip;
   overscroll-behavior: none;
 }
 

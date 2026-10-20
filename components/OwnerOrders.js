@@ -17,7 +17,9 @@ const RANGE_OPTIONS = [
 const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
 // Card action buttons: 44px touch target on phones, compact on desktop.
 const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold sm:min-h-9';
-const listIconBtn = 'grid h-10 w-10 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
+// List rows: compact on phones (36px), original sizes from sm up.
+const listAct = 'inline-flex h-9 items-center justify-center gap-1 rounded-full px-3 text-xs font-semibold sm:min-h-9 sm:h-auto sm:gap-1.5 sm:px-4 sm:text-sm';
+const listIconBtn = 'grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink';
 const iconBtn = 'grid h-11 w-11 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
 const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
@@ -271,17 +273,17 @@ export default function OwnerOrders() {
             const takeaway = isTakeaway(o.table_number);
             const summary = o.order_items.map((i) => `${i.quantity}× ${i.item_name}`).join(', ');
             return (
-              <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-3 py-3 sm:px-4 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
-                <div className="flex min-w-0 items-center gap-3 max-md:col-span-2 max-md:col-start-1 max-md:row-start-1 max-md:pr-[5.75rem] md:flex-1 md:basis-56">
-                  <div className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-accent text-on-accent">
+              <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
+                <div className="flex min-w-0 items-center gap-2.5 max-md:col-start-1 max-md:row-start-1 md:gap-3 md:flex-1 md:basis-56">
+                  <div className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-accent text-on-accent md:h-11 md:w-11 md:rounded-xl">
                     <div className="text-center leading-none">
                       <div className="text-[8px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
-                      <div className={`mt-0.5 font-bold ${takeaway ? 'text-xs' : 'text-lg'}`}>{takeaway ? 'away' : o.table_number}</div>
+                      <div className={`mt-0.5 font-bold ${takeaway ? 'text-[11px] md:text-xs' : 'text-base md:text-lg'}`}>{takeaway ? 'away' : o.table_number}</div>
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate font-semibold">Order #{o.id}</div>
-                    <div className="truncate text-xs text-muted">
+                    <div className="truncate text-[15px] font-semibold leading-tight md:text-base">Order #{o.id}</div>
+                    <div className="truncate text-[11px] leading-snug text-muted md:text-xs">
                       {o.customer_name} · {recent ? clock(o.created_at) : dateTime(o.created_at)}
                       {done && o.completed_at && ` · Done ${recent ? clock(o.completed_at) : dateTime(o.completed_at)}`}
                       {phone && ` · ${phone}`}
@@ -289,24 +291,24 @@ export default function OwnerOrders() {
                   </div>
                 </div>
 
-                <div className="min-w-0 text-sm max-md:col-span-2 max-md:row-start-2 md:flex-[2] md:basis-60">
+                <div className="min-w-0 text-[13px] leading-snug max-md:col-span-2 max-md:row-start-2 md:text-sm md:flex-[2] md:basis-60">
                   <p className="truncate" title={summary}>{summary}</p>
-                  {o.note && <p className="truncate text-xs text-accent">Note: {o.note}</p>}
+                  {o.note && <p className="truncate text-[11px] text-accent md:text-xs">Note: {o.note}</p>}
                 </div>
 
-                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-end rounded-full max-md:col-start-2 max-md:row-start-1 xl:justify-self-start px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
+                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-end rounded-full max-md:col-start-2 max-md:row-start-1 xl:justify-self-start px-2 py-0.5 text-[11px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
                   <Icon name={done ? 'check' : 'clock'} size={13} className="max-sm:hidden" />
                   {done ? 'Completed' : 'Received'}
                 </span>
 
                 <div className="min-w-0 text-left max-md:col-start-1 max-md:row-start-3 md:w-24 md:flex-none md:text-right xl:w-auto">
-                  <div className="font-bold tabular-nums">{money(o.total)}</div>
-                  <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
+                  <div className="font-bold leading-tight tabular-nums">{money(o.total)}</div>
+                  <div className={`text-[11px] font-semibold leading-tight md:text-xs ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
                 </div>
 
-                <div className="flex flex-none items-center justify-self-end gap-1 max-md:col-start-2 max-md:row-start-3 md:ml-auto xl:ml-0 xl:justify-end">
+                <div className="flex flex-none items-center justify-self-end gap-0.5 sm:gap-1 max-md:col-start-2 max-md:row-start-3 md:ml-auto xl:ml-0 xl:justify-end">
                   {!done && (
-                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${act} border border-accent text-accent hover:bg-okbg max-sm:w-11 max-sm:px-0`}>
+                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${listAct} border border-accent text-accent hover:bg-okbg max-sm:w-9 max-sm:px-0`}>
                       <Icon name="check" size={16} /> <span className="max-sm:hidden">Complete</span>
                     </button>
                   )}
@@ -315,7 +317,7 @@ export default function OwnerOrders() {
                     onClick={() => markPaid(o)}
                     disabled={isPaid(o)}
                     aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
-                    className={`${act} w-[5.5rem] flex-none px-2 transition-colors sm:w-28 ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
+                    className={`${listAct} min-w-[4.5rem] flex-none px-3 transition-colors sm:w-28 sm:px-2 ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
                   >
                     {isPaid(o) && <Icon name="check" size={16} />}
                     {isPaid(o) ? 'Paid' : 'Mark paid'}

@@ -17,8 +17,8 @@ const sub = (o) => [`#${o.id}`, o.customer_name].filter(Boolean).join(' · ');
 function PaymentLine({ order, className = '' }) {
   const paid = order.payment_status === 'paid';
   return (
-    <p className={`flex items-center gap-2 font-semibold ${paid ? 'text-ok' : 'text-warn'} ${className}`}>
-      <span aria-hidden="true" className={`h-2.5 w-2.5 flex-none rounded-full ${paid ? 'bg-ok' : 'bg-warn'}`} />
+    <p className={`flex items-center gap-1.5 whitespace-nowrap font-semibold ${paid ? 'text-ok' : 'text-warn'} ${className}`}>
+      <span aria-hidden="true" className={`h-2 w-2 flex-none rounded-full ${paid ? 'bg-ok' : 'bg-warn'}`} />
       {paid ? 'Paid at counter' : 'Payment pending'}
     </p>
   );
@@ -29,7 +29,7 @@ function Items({ order, big }) {
     <ul className={big ? 'space-y-2.5' : 'space-y-1.5'}>
       {order.order_items.map((i) => (
         <li key={i.id} className="min-w-0">
-          <div className={`flex items-baseline gap-2 font-semibold ${big ? 'text-base leading-snug' : 'text-[15px] leading-snug'}`}>
+          <div className={`flex items-baseline gap-2 font-semibold ${big ? 'text-base leading-snug' : 'text-sm leading-snug'}`}>
             <span className="flex-none whitespace-nowrap font-bold text-ok">{i.quantity} ×</span>
             <span className="min-w-0 break-words">{i.item_name}</span>
           </div>
@@ -46,9 +46,19 @@ function CompleteButton({ onClick, compact }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-on-accent transition-colors hover:bg-accent-hover active:scale-[0.99] h-10 px-4 text-sm ${compact ? '' : 'w-full'}`}
+      className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-accent font-semibold text-on-accent transition-colors hover:bg-accent-hover active:scale-[0.99] ${
+        compact ? 'h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm' : 'h-10 w-full px-4 text-sm'
+      }`}
     >
-      <Icon name="check" size={16} /> Mark completed
+      <Icon name="check" size={compact ? 14 : 16} />
+      {compact ? (
+        <>
+          <span className="sm:hidden">Complete</span>
+          <span className="max-sm:hidden">Mark completed</span>
+        </>
+      ) : (
+        'Mark completed'
+      )}
     </button>
   );
 }
@@ -85,15 +95,15 @@ export function KitchenList({ orders, onComplete }) {
       {orders.map((o) => (
         <li
           key={o.id}
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-3 py-3 sm:px-4 md:grid-cols-[11rem_minmax(0,1fr)_6rem_9.5rem_10.5rem] md:gap-x-4"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 sm:py-3 md:grid-cols-[11rem_minmax(0,1fr)_6rem_9.5rem_10.5rem] md:gap-x-4"
         >
           <div className="min-w-0 max-md:col-start-1 max-md:row-start-1 md:col-start-1 md:row-start-1">
-            <div className="truncate text-base font-bold leading-tight">{tableLabel(o.table_number)}</div>
-            <div className="truncate text-xs text-muted">{sub(o)}</div>
+            <div className="truncate text-[15px] font-bold leading-tight sm:text-base">{tableLabel(o.table_number)}</div>
+            <div className="truncate text-[11px] text-muted sm:text-xs">{sub(o)}</div>
           </div>
 
           <div className="flex justify-end max-md:col-start-2 max-md:row-start-1 md:col-start-3 md:row-start-1 md:justify-start">
-            <span className="rounded-full bg-okbg px-3 py-0.5 text-xs font-semibold capitalize text-ok">{o.status}</span>
+            <span className="rounded-full bg-okbg px-2.5 py-0.5 text-[11px] font-semibold capitalize text-ok sm:text-xs">{o.status}</span>
           </div>
 
           <div className="min-w-0 max-md:col-span-2 max-md:row-start-2 md:col-start-2 md:row-start-1">
@@ -101,7 +111,7 @@ export function KitchenList({ orders, onComplete }) {
             {o.note && <p className="mt-1 text-xs font-semibold text-warn">Note: {o.note}</p>}
           </div>
 
-          <PaymentLine order={o} className="text-sm max-md:col-start-1 max-md:row-start-3 md:col-start-4 md:row-start-1" />
+          <PaymentLine order={o} className="text-xs sm:text-sm max-md:col-start-1 max-md:row-start-3 md:col-start-4 md:row-start-1" />
 
           <div className="max-md:col-start-2 max-md:row-start-3 md:col-start-5 md:row-start-1">
             <CompleteButton compact onClick={() => onComplete(o.id)} />

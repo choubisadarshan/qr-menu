@@ -174,7 +174,7 @@ export default function OwnerAnalytics() {
   const catTotal = (cur?.categories ?? []).reduce((a, c) => a + num(c.revenue), 0) || 1;
   const paidShare = t && num(t.sales) > 0 ? (num(t.collected) / num(t.sales)) * 100 : 0;
 
-  const dateInput = 'rounded-lg bg-chip p-2.5 text-sm outline-none focus:ring-2 focus:ring-accent';
+  const dateInput = 'h-10 rounded-lg border border-edge bg-chip px-3 text-sm outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-1 focus:ring-accent/40';
   const card = 'rounded-2xl shadow-card';
   const busyTo = busiest ? (busiest.hour + 1) % 24 : 0;
 
@@ -204,12 +204,12 @@ export default function OwnerAnalytics() {
       {preset === 'custom' && (
         <div className={`grid grid-cols-2 gap-3 border border-edge bg-card p-4 sm:max-w-md ${card}`}>
           <div>
-            <label htmlFor="an-from" className="mb-1 block text-xs text-muted">From</label>
+            <label htmlFor="an-from" className="mb-1.5 block px-0.5 text-xs font-medium text-muted">From</label>
             <input id="an-from" type="date" className={`${dateInput} w-full`} value={customFrom}
               max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="an-to" className="mb-1 block text-xs text-muted">To</label>
+            <label htmlFor="an-to" className="mb-1.5 block px-0.5 text-xs font-medium text-muted">To</label>
             <input id="an-to" type="date" className={`${dateInput} w-full`} value={customTo}
               min={customFrom || undefined} max={toInputDate(new Date())} onChange={(e) => setCustomTo(e.target.value)} />
           </div>

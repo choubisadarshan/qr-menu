@@ -8,7 +8,8 @@ const OPTIONS = [
   { value: 'custom', label: 'Custom' },
 ];
 
-const dateBox = 'min-h-10 w-full min-w-0 rounded-lg border border-edge bg-card px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-accent';
+const dateBox = 'h-10 w-full min-w-0 rounded-lg border border-edge bg-card px-3 text-sm font-semibold outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-1 focus:ring-accent/40';
+const dateLabel = 'flex min-w-0 flex-col gap-1.5 text-xs font-medium text-muted';
 
 // "Today / Yesterday / Custom" dropdown. Choosing Custom reveals a From and To date.
 export default function RangePicker({ value, onChange }) {
@@ -18,9 +19,9 @@ export default function RangePicker({ value, onChange }) {
     <div className="flex flex-wrap items-end gap-2">
       <Dropdown variant="pill" align="left" value={value.key} onChange={(key) => set(key === 'custom' && !value.from ? { key, from: ymd(new Date()), to: ymd(new Date()) } : { key })} options={OPTIONS} ariaLabel="Date range" />
       {value.key === 'custom' && value.from && (
-        <div className="grid basis-full grid-cols-2 gap-2 sm:basis-auto">
-          <label className="min-w-0 text-xs text-muted">
-            From
+        <div className="grid basis-full grid-cols-2 gap-3 sm:basis-auto">
+          <label className={dateLabel}>
+            <span className="px-0.5">From</span>
             <input
               type="date"
               value={value.from}
@@ -29,8 +30,8 @@ export default function RangePicker({ value, onChange }) {
               className={dateBox}
             />
           </label>
-          <label className="min-w-0 text-xs text-muted">
-            To
+          <label className={dateLabel}>
+            <span className="px-0.5">To</span>
             <input
               type="date"
               value={value.to}

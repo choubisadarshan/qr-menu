@@ -315,3 +315,6 @@ input[type='date']::-webkit-calendar-picker-indicator {
 input[type='date']::-webkit-date-and-time-value {
   text-align: left;
 }
+input[type='date']:focus-visible {
+  outline: none; /* the field draws its own thin focus border */
+}

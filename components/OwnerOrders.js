@@ -5,7 +5,8 @@ import { money } from '@/lib/config';
 import OrderForm from '@/components/OrderForm';
 import Dropdown from '@/components/Dropdown';
 import LiveSince from '@/components/LiveSince';
-import { PageHeader, MoneyStat, StatusPill, Tabs, SearchBox, Icon } from '@/components/owner/ui';
+import { PageHeader, MoneyStat, Tabs, SearchBox, Icon, ViewToggle, Pager } from '@/components/owner/ui';
+import { usePaged, readView, saveView } from '@/lib/usePaged';
 import { isTakeaway, tableLabel } from '@/lib/orderType';
 import { clock, dateTime, formatDuration, TWELVE_HOURS } from '@/lib/time';
 
@@ -36,13 +37,7 @@ export default function OwnerOrders() {
   const [range, setRange] = useState('today');
   const [filter, setFilter] = useState('all'); // all | received | completed
   const [search, setSearch] = useState('');
-  const [view, setView] = useState(() => {
-    try {
-      return localStorage.getItem('owner-orders-view') === 'list' ? 'list' : 'grid';
-    } catch {
-      return 'grid';
-    }
-  });
+  const [view, setView] = useState(() => readView('owner-orders-view', 'grid'));
   const [editing, setEditing] = useState(null); // null | 'new' | an order
   const [error, setError] = useState('');
   const [searchOpen, setSearchOpen] = useState(false); // phone: search field is expanded
@@ -164,31 +159,10 @@ export default function OwnerOrders() {
   ];
   const chooseView = (v) => {
     setView(v);
-    try {
-      localStorage.setItem('owner-orders-view', v);
-    } catch {}
+    saveView('owner-orders-view', v);
   };
-  // Grid / list switch. Desktop: in the toolbar. Phones: on its own row above the orders (never inside a scrolling row).
-  const viewToggle = (cls) => (
-    <div role="group" aria-label="Card layout" className={`${cls} flex-none items-center gap-0.5 rounded-lg border border-edge bg-card p-0.5`}>
-      {[
-        ['grid', 'Grid view'],
-        ['list', 'List view'],
-      ].map(([v, label]) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => chooseView(v)}
-          aria-pressed={view === v}
-          aria-label={label}
-          title={label}
-          className={`grid h-9 w-9 place-items-center rounded-md transition-colors ${view === v ? 'bg-accent text-on-accent' : 'text-muted hover:bg-chip hover:text-ink'}`}
-        >
-          <Icon name={v} size={16} />
-        </button>
-      ))}
-    </div>
-  );
+  // 20 orders per page; back to page 1 whenever the filter, range or search changes.
+  const pg = usePaged(shown, `${filter}|${range}|${q}`);
   const rangeNote = range === 'today' ? 'Today' : range === 'week' ? 'Last 7 days' : 'All time';
 
   return (
@@ -239,7 +213,7 @@ export default function OwnerOrders() {
             aria-hidden={searchOpen ? 'true' : undefined}
           >
             <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
-            {viewToggle('hidden md:flex')}
+            <ViewToggle value={view} onChange={chooseView} className="hidden md:flex" />
             <button onClick={() => setEditing('new')} className={`${btn} flex h-10 flex-none items-center gap-1.5 whitespace-nowrap bg-accent py-0 text-on-accent hover:bg-accent-hover`}>
               <Icon name="plus" size={16} /> New order
             </button>
@@ -259,13 +233,13 @@ export default function OwnerOrders() {
           <span className="text-sm text-muted">
             {shown.length} order{shown.length === 1 ? '' : 's'}
           </span>
-          {viewToggle('flex')}
+          <ViewToggle value={view} onChange={chooseView} />
         </div>
       )}
 
       {view === 'list' ? (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
-          {shown.map((o) => {
+          {pg.slice.map((o) => {
             const phone = phoneOf(o);
             const created = new Date(o.created_at).getTime();
             const recent = isRecent(o.created_at);
@@ -335,7 +309,7 @@ export default function OwnerOrders() {
         </ul>
       ) : (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {shown.map((o) => {
+        {pg.slice.map((o) => {
           const phone = phoneOf(o);
           const created = new Date(o.created_at).getTime();
           const recent = isRecent(o.created_at);
@@ -455,6 +429,8 @@ export default function OwnerOrders() {
         })}
       </div>
       )}
+
+      <Pager pg={pg} />
 
       {editing && (
         <OrderForm

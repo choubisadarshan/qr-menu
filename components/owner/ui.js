@@ -187,3 +187,53 @@ export function MoneyStat({ label, value, sub, tone }) {
     </div>
   );
 }
+
+
+// Grid / list switch used on the Owner Orders, Kitchen and Order history screens.
+export function ViewToggle({ value, onChange, className = 'flex' }) {
+  return (
+    <div role="group" aria-label="Card layout" className={`${className} flex-none items-center gap-0.5 rounded-lg border border-edge bg-card p-0.5`}>
+      {[
+        ['grid', 'Grid view'],
+        ['list', 'List view'],
+      ].map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          aria-pressed={value === v}
+          aria-label={label}
+          title={label}
+          className={`grid h-9 w-9 place-items-center rounded-md transition-colors ${value === v ? 'bg-accent text-on-accent' : 'text-muted hover:bg-chip hover:text-ink'}`}
+        >
+          <Icon name={v} size={16} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Small Previous / Next bar under a long list. `pg` is what usePaged() returns. Hidden when everything fits on one page.
+export function Pager({ pg }) {
+  if (pg.pages <= 1) return null;
+  const btn =
+    'inline-flex h-9 items-center gap-1 rounded-lg border border-edge bg-card px-3 text-xs font-semibold transition-colors hover:bg-chip disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card';
+  const go = (p) => {
+    pg.go(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  return (
+    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3">
+      <button type="button" onClick={() => go(pg.page - 1)} disabled={pg.page <= 1} className={btn}>
+        <Icon name="chevronLeft" size={14} /> Previous
+      </button>
+      <span className="text-center text-xs tabular-nums text-muted">
+        {pg.from}–{pg.to} of {pg.total}
+        <span className="hidden sm:inline"> · Page {pg.page} of {pg.pages}</span>
+      </span>
+      <button type="button" onClick={() => go(pg.page + 1)} disabled={pg.page >= pg.pages} className={btn}>
+        Next <Icon name="chevronRight" size={14} />
+      </button>
+    </nav>
+  );
+}

@@ -3,22 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useStaff, signOut } from '@/lib/useStaff';
-import { money } from '@/lib/config';
-import { clock, dateTime } from '@/lib/time';
-import { tableLabel } from '@/lib/orderType';
 import KitchenShell from '@/components/kitchen/KitchenShell';
 import RangePicker from '@/components/kitchen/RangePicker';
 import { initialRange, rangeBounds, rangeWord } from '@/lib/dateRange';
-import { PageHeader, SearchBox, StatusPill, Icon } from '@/components/owner/ui';
-
-const STRIP = {
-  received: 'border-l-warn',
-};
-
-// Two statuses only: Received -> Completed
-const NEXT = {
-  received: ['completed', 'Mark completed'],
-};
+import { PageHeader, SearchBox, Icon, ViewToggle, Pager } from '@/components/owner/ui';
+import { KitchenCard, KitchenList, HistoryList, HistoryGrid } from '@/components/kitchen/OrderViews';
+import { usePaged, readView, saveView } from '@/lib/usePaged';
 
 // Stat card with an icon tile (design reference). Three of them sit side by side, even on phones.
 const TONES = {
@@ -45,9 +35,6 @@ function Stat({ icon, tone, label, value, sub }) {
   );
 }
 
-const waited = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`);
-const itemCount = (o) => o.order_items.reduce((a, i) => a + Number(i.quantity || 0), 0);
-
 export default function KitchenPage() {
   const router = useRouter();
   const { loading, email } = useStaff(['kitchen', 'owner'], '/kitchen/login');
@@ -56,7 +43,8 @@ export default function KitchenPage() {
   const [tab, setTab] = useState('Kitchen'); // 'Kitchen' | 'Order history'
   const [search, setSearch] = useState('');
   const [soundOn, setSoundOn] = useState(false);
-  const [now, setNow] = useState(0);
+  const [kitchenView, setKitchenView] = useState(() => readView('kitchen-view', 'grid'));
+  const [historyView, setHistoryView] = useState(() => readView('kitchen-history-view', 'list'));
   const audio = useRef(null);
   const soundRef = useRef(false);
 
@@ -90,7 +78,6 @@ export default function KitchenPage() {
   useEffect(() => {
     if (loading) return;
     load();
-    setNow(Date.now());
     const beep = () => {
       const c = audio.current;
       if (!c || !soundRef.current) return;
@@ -114,10 +101,8 @@ export default function KitchenPage() {
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, load)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, load)
       .subscribe();
-    const tick = setInterval(() => setNow(Date.now()), 30000);
     return () => {
       supabase.removeChannel(ch);
-      clearInterval(tick);
     };
   }, [loading, load]);
 
@@ -149,9 +134,25 @@ export default function KitchenPage() {
   const activeShown = active.filter(matches); // oldest first, so the longest-waiting order is on top
   const doneShown = done.filter(matches).reverse(); // newest first
 
+  // 20 orders per page, so a long list never slows the screen down. Going back to page 1 on any search / date change.
+  const resetKey = `${q}|${rKey}|${rFrom}|${rTo}`;
+  const activePg = usePaged(activeShown, `a|${resetKey}`);
+  const donePg = usePaged(doneShown, `d|${resetKey}`);
+
   if (loading) return <p className="p-10 text-center text-muted">Loading…</p>;
 
   const isKitchen = tab === 'Kitchen';
+  const pg = isKitchen ? activePg : donePg;
+  const view = isKitchen ? kitchenView : historyView;
+  const chooseView = (v) => {
+    if (isKitchen) {
+      setKitchenView(v);
+      saveView('kitchen-view', v);
+    } else {
+      setHistoryView(v);
+      saveView('kitchen-history-view', v);
+    }
+  };
 
   return (
     <KitchenShell tab={tab} setTab={setTab} badge={range.key === 'today' ? active.length : 0} email={email} onSignOut={() => signOut(router, '/kitchen/login')}>
@@ -181,121 +182,43 @@ export default function KitchenPage() {
         <RangePicker value={range} onChange={setRange} />
       </div>
 
-      {isKitchen ? (
-        <>
-          {activeShown.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
-              {q ? 'No orders match your search.' : 'No active orders. New orders appear here instantly.'}
-            </p>
-          )}
-
-          {/* Order cards keep the same sizes as before (big table number, large item text, large button). */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {activeShown.map((o) => {
-              const next = NEXT[o.status];
-              const mins = Math.max(0, Math.round((now - new Date(o.created_at).getTime()) / 60000));
-              return (
-                <article key={o.id} className={`min-w-0 rounded-2xl border border-l-4 border-edge bg-card p-4 shadow-card ${STRIP[o.status] || ''}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-3xl font-bold">{tableLabel(o.table_number)}</div>
-                      <div className="break-words text-sm text-muted">
-                        #{o.id} · {o.customer_name}
-                      </div>
-                    </div>
-                    <div className="flex-none text-right">
-                      <span className="rounded-md bg-chip px-3 py-1 text-xs font-semibold capitalize">{o.status}</span>
-                      <div className={`mt-1 text-sm font-semibold ${mins >= 15 ? 'text-accent' : 'text-muted'}`}>
-                        {waited(mins)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <ul className="my-3 divide-y divide-line text-lg">
-                    {o.order_items.map((i) => (
-                      <li key={i.id} className="py-2">
-                        <b>{i.quantity} ×</b> {i.item_name}
-                        {i.options_text && <div className="text-sm text-muted">{i.options_text}</div>}
-                        {i.note && <div className="text-sm font-semibold text-accent">Note: {i.note}</div>}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {o.note && (
-                    <p className="mb-3 rounded-lg bg-chip p-2 text-sm font-semibold text-accent">Note: {o.note}</p>
-                  )}
-
-                  <p className="mb-3 text-sm text-muted">
-                    {o.payment_status === 'paid' ? 'Paid at counter' : 'Not paid yet'}
-                  </p>
-
-                  {next && (
-                    <button
-                      onClick={() => setStatus(o.id, next[0])}
-                      className="w-full rounded-xl bg-accent p-3.5 text-lg font-semibold text-on-accent hover:bg-accent-hover"
-                    >
-                      {next[1]}
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </section>
-        </>
-      ) : (
-        <>
-          {doneShown.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
-              {q ? 'No orders match your search.' : `No completed orders ${rangeWord(range)}.`}
-            </p>
-          )}
-
-          {doneShown.length > 0 && (
-            <>
-              {/* Tablet / desktop: table */}
-              <div className="hidden overflow-hidden rounded-2xl border border-edge bg-card shadow-card md:block">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-chip text-xs uppercase tracking-wide text-muted">
-                    <tr>
-                      {['Order', 'Table', 'Date & time', 'Items', 'Total', 'Status'].map((h) => (
-                        <th key={h} scope="col" className="px-4 py-3 font-semibold">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {doneShown.map((o) => (
-                      <tr key={o.id}>
-                        <td className="px-4 py-3.5 font-bold">#{o.id}</td>
-                        <td className="px-4 py-3.5">{tableLabel(o.table_number)}</td>
-                        <td className="px-4 py-3.5 tabular-nums">{dateTime(o.created_at)}</td>
-                        <td className="px-4 py-3.5 tabular-nums">{itemCount(o)}</td>
-                        <td className="px-4 py-3.5 tabular-nums">{money(o.total)}</td>
-                        <td className="px-4 py-3.5"><StatusPill status={o.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Phones: one card per order */}
-              <ul className="space-y-3 md:hidden">
-                {doneShown.map((o) => (
-                  <li key={o.id} className="rounded-2xl border border-l-4 border-edge border-l-ok bg-card p-4 shadow-card">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-lg font-bold">{tableLabel(o.table_number)} <span className="text-sm font-normal text-muted">#{o.id}</span></div>
-                        <div className="text-sm text-muted">{clock(o.created_at)} · {itemCount(o)} item{itemCount(o) === 1 ? '' : 's'}</div>
-                      </div>
-                      <StatusPill status={o.status} />
-                    </div>
-                    <div className="mt-2 text-base font-semibold tabular-nums">{money(o.total)}</div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
+      {pg.total > 0 && (
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm text-muted">
+            {pg.total} order{pg.total === 1 ? '' : 's'}
+          </span>
+          <ViewToggle value={view} onChange={chooseView} />
+        </div>
       )}
+
+      {pg.total === 0 && (
+        <p className="rounded-2xl border border-dashed border-edge py-16 text-center text-muted">
+          {q
+            ? 'No orders match your search.'
+            : isKitchen
+              ? 'No active orders. New orders appear here instantly.'
+              : `No completed orders ${rangeWord(range)}.`}
+        </p>
+      )}
+
+      {pg.total > 0 &&
+        (isKitchen ? (
+          view === 'list' ? (
+            <KitchenList orders={activePg.slice} onComplete={(id) => setStatus(id, 'completed')} />
+          ) : (
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {activePg.slice.map((o) => (
+                <KitchenCard key={o.id} order={o} onComplete={(id) => setStatus(id, 'completed')} />
+              ))}
+            </section>
+          )
+        ) : view === 'list' ? (
+          <HistoryList orders={donePg.slice} />
+        ) : (
+          <HistoryGrid orders={donePg.slice} />
+        ))}
+
+      <Pager pg={pg} />
     </KitchenShell>
   );
 }

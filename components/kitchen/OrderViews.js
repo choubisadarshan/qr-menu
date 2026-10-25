@@ -3,9 +3,15 @@ import { money } from '@/lib/config';
 import { clock, dateTime } from '@/lib/time';
 import { isTakeaway, tableLabel } from '@/lib/orderType';
 import { Icon, StatusPill } from '@/components/owner/ui';
-import OrderTimer from '@/components/kitchen/OrderTimer';
 
 const itemCount = (o) => o.order_items.reduce((a, i) => a + Number(i.quantity || 0), 0);
+// How long an order took, from placed to completed: "<1 min", "5 min", "1h 05m"
+const took = (o) => {
+  if (!o.completed_at) return '';
+  const m = Math.max(0, Math.round((new Date(o.completed_at) - new Date(o.created_at)) / 60000));
+  if (m < 1) return '<1 min';
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+};
 const sub = (o) => [`#${o.id}`, o.customer_name].filter(Boolean).join(' · ');
 
 function PaymentLine({ order, className = '' }) {
@@ -20,14 +26,14 @@ function PaymentLine({ order, className = '' }) {
 
 function Items({ order, big }) {
   return (
-    <ul className={big ? 'space-y-3' : 'space-y-1.5'}>
+    <ul className={big ? 'space-y-2.5' : 'space-y-1.5'}>
       {order.order_items.map((i) => (
         <li key={i.id} className="min-w-0">
-          <div className={`flex items-baseline gap-2 font-semibold ${big ? 'text-xl' : 'text-[15px] leading-snug'}`}>
+          <div className={`flex items-baseline gap-2 font-semibold ${big ? 'text-base leading-snug' : 'text-[15px] leading-snug'}`}>
             <span className="flex-none whitespace-nowrap font-bold text-ok">{i.quantity} ×</span>
             <span className="min-w-0 break-words">{i.item_name}</span>
           </div>
-          {i.options_text && <div className={`text-muted ${big ? 'mt-0.5 text-base' : 'text-xs'}`}>{i.options_text}</div>}
+          {i.options_text && <div className={`text-muted ${big ? 'mt-0.5 text-sm' : 'text-xs'}`}>{i.options_text}</div>}
           {i.note && <div className={`font-semibold text-warn ${big ? 'mt-0.5 text-sm' : 'text-xs'}`}>Note: {i.note}</div>}
         </li>
       ))}
@@ -40,9 +46,9 @@ function CompleteButton({ onClick, compact }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-2xl bg-accent font-semibold text-on-accent transition-colors hover:bg-accent-hover active:scale-[0.99] ${compact ? 'h-10 px-4 text-sm' : 'w-full px-4 py-3.5 text-lg'}`}
+      className={`flex items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-on-accent transition-colors hover:bg-accent-hover active:scale-[0.99] h-10 px-4 text-sm ${compact ? '' : 'w-full'}`}
     >
-      <Icon name="check" size={compact ? 16 : 22} /> Mark completed
+      <Icon name="check" size={16} /> Mark completed
     </button>
   );
 }
@@ -50,26 +56,23 @@ function CompleteButton({ onClick, compact }) {
 // ---- Kitchen tab, GRID: the card from the design ------------------------------------------
 export function KitchenCard({ order: o, onComplete }) {
   return (
-    <article className="flex min-w-0 flex-col rounded-3xl border border-edge bg-card p-5 shadow-card">
+    <article className="flex min-w-0 flex-col rounded-2xl border border-edge bg-card p-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="break-words text-3xl font-extrabold leading-tight tracking-tight">{tableLabel(o.table_number)}</div>
-          <div className="mt-1 break-words text-base text-muted">{sub(o)}</div>
+          <div className="truncate text-xl font-bold leading-tight">{tableLabel(o.table_number)}</div>
+          <div className="mt-0.5 truncate text-sm text-muted">{sub(o)}</div>
         </div>
-        <div className="flex flex-none flex-col items-end gap-2">
-          <span className="rounded-full bg-okbg px-4 py-1.5 text-sm font-semibold capitalize text-ok">{o.status}</span>
-          <OrderTimer since={o.created_at} className="text-lg font-semibold tabular-nums" />
-        </div>
+        <span className="flex-none rounded-full bg-okbg px-3 py-1 text-xs font-semibold capitalize text-ok">{o.status}</span>
       </div>
 
-      <hr className="my-4 border-line" />
+      <hr className="my-3 border-line" />
 
       <div className="flex-1">
         <Items order={o} big />
-        {o.note && <p className="mt-3 rounded-xl bg-chip p-2.5 text-sm font-semibold text-warn">Note: {o.note}</p>}
+        {o.note && <p className="mt-2.5 rounded-lg bg-chip p-2 text-xs font-semibold text-warn">Note: {o.note}</p>}
       </div>
 
-      <PaymentLine order={o} className="mb-3 mt-5 text-base" />
+      <PaymentLine order={o} className="mb-3 mt-4 text-sm" />
       <CompleteButton onClick={() => onComplete(o.id)} />
     </article>
   );
@@ -82,16 +85,15 @@ export function KitchenList({ orders, onComplete }) {
       {orders.map((o) => (
         <li
           key={o.id}
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-3 py-3 sm:px-4 md:grid-cols-[11rem_minmax(0,1fr)_6.5rem_9.5rem_11.5rem] md:gap-x-4"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-3 py-3 sm:px-4 md:grid-cols-[11rem_minmax(0,1fr)_6rem_9.5rem_10.5rem] md:gap-x-4"
         >
           <div className="min-w-0 max-md:col-start-1 max-md:row-start-1 md:col-start-1 md:row-start-1">
-            <div className="truncate text-lg font-extrabold leading-tight">{tableLabel(o.table_number)}</div>
+            <div className="truncate text-base font-bold leading-tight">{tableLabel(o.table_number)}</div>
             <div className="truncate text-xs text-muted">{sub(o)}</div>
           </div>
 
-          <div className="flex flex-col items-end gap-1 max-md:col-start-2 max-md:row-start-1 md:col-start-3 md:row-start-1 md:items-start">
+          <div className="flex justify-end max-md:col-start-2 max-md:row-start-1 md:col-start-3 md:row-start-1 md:justify-start">
             <span className="rounded-full bg-okbg px-3 py-0.5 text-xs font-semibold capitalize text-ok">{o.status}</span>
-            <OrderTimer since={o.created_at} className="text-sm font-semibold tabular-nums" />
           </div>
 
           <div className="min-w-0 max-md:col-span-2 max-md:row-start-2 md:col-start-2 md:row-start-1">
@@ -132,7 +134,7 @@ export function HistoryList({ orders }) {
         <table className="w-full text-left text-sm">
           <thead className="bg-chip text-xs uppercase tracking-wide text-muted">
             <tr>
-              {['Order', 'Table', 'Customer', 'Date & time', 'Items', 'Total', 'Status'].map((h) => (
+              {['Order', 'Table', 'Customer', 'Date & time', 'Items', 'Total', 'Time taken', 'Status'].map((h) => (
                 <th key={h} scope="col" className="px-4 py-3 font-semibold">
                   {h}
                 </th>
@@ -148,6 +150,7 @@ export function HistoryList({ orders }) {
                 <td className="px-4 py-3.5 tabular-nums">{dateTime(o.created_at)}</td>
                 <td className="px-4 py-3.5 tabular-nums">{itemCount(o)}</td>
                 <td className="px-4 py-3.5 tabular-nums">{money(o.total)}</td>
+                <td className="px-4 py-3.5 tabular-nums">{took(o) || '—'}</td>
                 <td className="px-4 py-3.5">
                   <StatusPill status={o.status} />
                 </td>
@@ -172,7 +175,7 @@ export function HistoryList({ orders }) {
             <div className="flex-none text-right">
               <div className="font-bold tabular-nums">{money(o.total)}</div>
               <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-ok">
-                <Icon name="check" size={12} /> Completed
+                <Icon name="check" size={12} /> Completed{took(o) && ` · ${took(o)}`}
               </div>
             </div>
           </li>
@@ -198,7 +201,10 @@ export function HistoryGrid({ orders }) {
           <div className="truncate text-xs text-muted">
             {clock(o.created_at)} · {itemCount(o)} item{itemCount(o) === 1 ? '' : 's'}
           </div>
-          <div className="mt-1 text-lg font-bold tabular-nums">{money(o.total)}</div>
+          <div className="mt-1 flex items-baseline justify-between gap-2">
+            <span className="text-lg font-bold tabular-nums">{money(o.total)}</span>
+            {took(o) && <span className="text-xs font-semibold text-ok">{took(o)}</span>}
+          </div>
         </article>
       ))}
     </div>

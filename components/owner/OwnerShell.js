@@ -184,7 +184,7 @@ function NavItems({ tab, onSelect, badge, compact }) {
             onClick={() => onSelect(t.id)}
             aria-current={active ? 'page' : undefined}
             title={compact ? t.id : undefined}
-            className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${compact ? 'justify-center' : ''} ${active ? 'bg-okbg text-ok' : 'text-muted hover:bg-chip hover:text-ink'}`}
+            className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:py-2.5${compact ? 'justify-center' : ''} ${active ? 'bg-okbg text-ok' : 'text-muted hover:bg-chip hover:text-ink'}`}
           >
             <Icon name={t.icon} />
             {!compact && <span className="flex-1 text-left">{t.id}</span>}
@@ -202,7 +202,7 @@ function NavItems({ tab, onSelect, badge, compact }) {
 
 function SidebarBody({ tab, onSelect, badge, compact, email, onSignOut }) {
   return (
-    <div className="flex h-full flex-col gap-4 p-3">
+    <div className="flex h-full flex-col gap-3 p-3 lg:gap-4">
       <div className={compact ? 'flex justify-center pt-1' : 'px-1 pt-1'}>
         <Logo compact={compact} />
       </div>
@@ -264,13 +264,13 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 border-b border-line bg-bg/90 px-3 py-2.5 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 border-b border-line bg-bg/90 px-3 py-2 backdrop-blur sm:px-6 sm:py-2.5">
           <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setDrawer(true)}
               aria-label="Open menu"
-              className="relative grid h-10 w-10 flex-none place-items-center rounded-xl border border-edge bg-card lg:hidden"
+              className="relative grid h-9 w-9 flex-none place-items-center rounded-lg border border-edge bg-card sm:h-10 sm:w-10 sm:rounded-xl lg:hidden"
             >
               <Icon name="hamburger" />
               {badge > 0 && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />}
@@ -289,7 +289,7 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
               <span className="hidden text-muted sm:inline">Workspace</span>
               <Icon name="chevronRight" size={14} className="hidden text-muted sm:block" />
-              <span className="truncate font-semibold">{tab}</span>
+              <span className="truncate text-[15px] font-semibold sm:text-sm">{tab}</span>
             </nav>
 
             <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
@@ -299,12 +299,12 @@ export default function OwnerShell({ tab, setTab, badge = 0, email, onSignOut, c
               <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted md:hidden">
                 <Icon name="calendar" size={14} /> {dateShort}
               </span>
-              <ThemeToggle />
+              <ThemeToggle tone="owner"/>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-6">{children}</main>
+        <main className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">{children}</main>
       </div>
 
       {/* Mobile: bottom drawer */}

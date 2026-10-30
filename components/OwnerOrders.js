@@ -15,13 +15,13 @@ const RANGE_OPTIONS = [
   { value: 'week', label: 'Last 7 days' },
   { value: 'all', label: 'All time' },
 ];
-const btn = 'rounded-lg px-4 py-1.5 text-sm font-semibold';
-// Card action buttons: 44px touch target on phones, compact on desktop.
-const act = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold sm:min-h-9';
+const btn = 'rounded-lg px-3 py-1.5 text-[13px] font-semibold sm:px-4 sm:text-sm';
+// Card action buttons: 36px on phones, compact on desktop.
+const act = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold sm:px-4 sm:text-sm';
 // List rows: compact on phones (36px), original sizes from sm up.
-const listAct = 'inline-flex h-9 items-center justify-center gap-1 rounded-full px-3 text-xs font-semibold sm:min-h-9 sm:h-auto sm:gap-1.5 sm:px-4 sm:text-sm';
-const listIconBtn = 'grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink';
-const iconBtn = 'grid h-11 w-11 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
+const listAct = 'inline-flex h-8 items-center justify-center gap-1 rounded-full px-3 text-xs font-semibold sm:min-h-9 sm:h-auto sm:gap-1.5 sm:px-4 sm:text-sm';
+const listIconBtn = 'grid h-8 w-8 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink sm:h-9 sm:w-9';
+const iconBtn = 'grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition-colors hover:bg-chip hover:text-ink';
 const EASE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]';
 
 const isRecent = (iso) => Date.now() - new Date(iso).getTime() < TWELVE_HOURS;
@@ -169,7 +169,7 @@ export default function OwnerOrders() {
     <section>
       <PageHeader title="Orders" subtitle="A little less busywork. A little more brewing." />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:mb-5 sm:gap-3 lg:grid-cols-4">
         <MoneyStat
           tone="ok"
           label={`Collected · ${rangeNote}`}
@@ -186,7 +186,7 @@ export default function OwnerOrders() {
         <MoneyStat label="Completed orders" value={completed.length} sub="Finished orders" />
       </div>
 
-      <div className="mb-5 flex flex-col gap-4">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:gap-4">
         {/* Phones and tablets: chips that scroll sideways. Desktop uses the dropdown in the row below. */}
         <div className="lg:hidden">
           <Tabs ariaLabel="Order queue filter" value={filter} onChange={setFilter} options={filterOptions} />
@@ -207,14 +207,14 @@ export default function OwnerOrders() {
             className={`min-w-0 flex-1 transition-shadow ${EASE} ${searchOpen ? 'max-md:shadow-soft' : ''}`}
           />
           <div
-            className={`flex flex-none items-center gap-2 transition-[max-width,opacity] ${EASE} md:max-w-none md:opacity-100 ${
+            className={`flex flex-none items-center gap-1.5 transition-[max-width,opacity] sm:gap-2 ${EASE} md:max-w-none md:opacity-100 ${
               searchOpen ? 'max-md:pointer-events-none max-md:max-w-0 max-md:opacity-0' : 'max-md:max-w-80 max-md:opacity-100'
             } ${clipBar ? 'max-md:overflow-hidden' : ''}`}
             aria-hidden={searchOpen ? 'true' : undefined}
           >
             <Dropdown variant="pill" align="right" value={range} onChange={setRange} options={RANGE_OPTIONS} ariaLabel="Date range" />
             <ViewToggle value={view} onChange={chooseView} className="hidden md:flex" />
-            <button onClick={() => setEditing('new')} className={`${btn} flex h-10 flex-none items-center gap-1.5 whitespace-nowrap bg-accent py-0 text-on-accent hover:bg-accent-hover`}>
+            <button onClick={() => setEditing('new')} className={`${btn} flex h-9 flex-none items-center gap-1 whitespace-nowrap bg-accent py-0 text-on-accent hover:bg-accent-hover sm:h-10 sm:gap-1.5`}>
               <Icon name="plus" size={16} /> New order
             </button>
           </div>
@@ -229,8 +229,8 @@ export default function OwnerOrders() {
       )}
 
       {shown.length > 0 && (
-        <div className="mb-3 flex items-center justify-between md:hidden">
-          <span className="text-sm text-muted">
+        <div className="mb-2 flex items-center justify-between md:hidden">
+          <span className="text-[13px] text-muted">
             {shown.length} order{shown.length === 1 ? '' : 's'}
           </span>
           <ViewToggle value={view} onChange={chooseView} />
@@ -247,16 +247,17 @@ export default function OwnerOrders() {
             const takeaway = isTakeaway(o.table_number);
             const summary = o.order_items.map((i) => `${i.quantity}× ${i.item_name}`).join(', ');
             return (
-              <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
-                <div className="flex min-w-0 items-center gap-2.5 max-md:col-start-1 max-md:row-start-1 md:gap-3 md:flex-1 md:basis-56">
-                  <div className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-accent text-on-accent md:h-11 md:w-11 md:rounded-xl">
+              <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 xl:grid xl:grid-cols-[minmax(13rem,1.3fr)_minmax(0,1.2fr)_7rem_6rem_22rem]">
+                {/* Row 1 (phone): table badge, order + customer, status */}
+                <div className="flex min-w-0 items-center gap-2 max-md:col-start-1 max-md:row-start-1 md:gap-3 md:flex-1 md:basis-56">
+                  <div className="grid h-9 w-9 flex-none place-items-center rounded-lg bg-accent text-on-accent md:h-11 md:w-11 md:rounded-xl">
                     <div className="text-center leading-none">
-                      <div className="text-[8px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
-                      <div className={`mt-0.5 font-bold ${takeaway ? 'text-[11px] md:text-xs' : 'text-base md:text-lg'}`}>{takeaway ? 'away' : o.table_number}</div>
+                      <div className="text-[7px] font-semibold uppercase tracking-wider opacity-80 md:text-[8px]">{takeaway ? 'Take' : 'Table'}</div>
+                      <div className={`mt-0.5 font-bold ${takeaway ? 'text-[10px] md:text-xs' : 'text-sm md:text-lg'}`}>{takeaway ? 'away' : o.table_number}</div>
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate text-[15px] font-semibold leading-tight md:text-base">Order #{o.id}</div>
+                    <div className="truncate text-sm font-semibold leading-tight md:text-base">Order #{o.id}</div>
                     <div className="truncate text-[11px] leading-snug text-muted md:text-xs">
                       {o.customer_name} · {recent ? clock(o.created_at) : dateTime(o.created_at)}
                       {done && o.completed_at && ` · Done ${recent ? clock(o.completed_at) : dateTime(o.completed_at)}`}
@@ -265,50 +266,54 @@ export default function OwnerOrders() {
                   </div>
                 </div>
 
+                {/* Row 2 (phone): the dishes */}
                 <div className="min-w-0 text-[13px] leading-snug max-md:col-span-2 max-md:row-start-2 md:text-sm md:flex-[2] md:basis-60">
                   <p className="truncate" title={summary}>{summary}</p>
                   {o.note && <p className="truncate text-[11px] text-accent md:text-xs">Note: {o.note}</p>}
                 </div>
 
-                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-end rounded-full max-md:col-start-2 max-md:row-start-1 xl:justify-self-start px-2 py-0.5 text-[11px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
+                <span className={`inline-flex flex-none items-center gap-1.5 justify-self-end rounded-full max-md:col-start-2 max-md:row-start-1 xl:justify-self-start px-2 py-0.5 text-[10px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}>
                   <Icon name={done ? 'check' : 'clock'} size={13} className="max-sm:hidden" />
                   {done ? 'Completed' : 'Received'}
                 </span>
 
-                <div className="min-w-0 text-left max-md:col-start-1 max-md:row-start-3 md:w-24 md:flex-none md:text-right xl:w-auto">
-                  <div className="font-bold leading-tight tabular-nums">{money(o.total)}</div>
-                  <div className={`text-[11px] font-semibold leading-tight md:text-xs ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
-                </div>
+                {/* Row 3 (phone): price on the left, actions on the right. Its own row, so the buttons can never squeeze the title above. md+ ignores this wrapper. */}
+                <div className="flex items-center justify-between gap-2 max-md:col-span-2 max-md:row-start-3 md:contents">
+                  <div className="min-w-0 text-left md:w-24 md:flex-none md:text-right xl:w-auto">
+                    <div className="text-[15px] font-bold leading-tight tabular-nums md:text-base">{money(o.total)}</div>
+                    <div className={`text-[11px] font-semibold leading-tight md:text-xs ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
+                  </div>
 
-                <div className="flex flex-none items-center justify-self-end gap-0.5 sm:gap-1 max-md:col-start-2 max-md:row-start-3 md:ml-auto xl:ml-0 xl:justify-end">
-                  {!done && (
-                    <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${listAct} border border-accent text-accent hover:bg-okbg max-sm:w-9 max-sm:px-0`}>
-                      <Icon name="check" size={16} /> <span className="max-sm:hidden">Complete</span>
+                  <div className="flex flex-none items-center gap-1 md:ml-auto xl:ml-0 xl:justify-end">
+                    {!done && (
+                      <button type="button" onClick={() => patch(o.id, { status: 'completed' })} title="Mark completed" aria-label="Mark completed" className={`${listAct} border border-accent text-accent hover:bg-okbg max-sm:w-8 max-sm:px-0`}>
+                        <Icon name="check" size={16} /> <span className="max-sm:hidden">Complete</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => markPaid(o)}
+                      disabled={isPaid(o)}
+                      aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
+                      className={`${listAct} min-w-[4.25rem] flex-none px-3 transition-colors sm:w-28 sm:px-2 ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
+                    >
+                      {isPaid(o) && <Icon name="check" size={14} />}
+                      {isPaid(o) ? 'Paid' : 'Mark paid'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => markPaid(o)}
-                    disabled={isPaid(o)}
-                    aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
-                    className={`${listAct} min-w-[4.5rem] flex-none px-3 transition-colors sm:w-28 sm:px-2 ${isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'}`}
-                  >
-                    {isPaid(o) && <Icon name="check" size={16} />}
-                    {isPaid(o) ? 'Paid' : 'Mark paid'}
-                  </button>
-                  <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={listIconBtn}>
-                    <Icon name="edit" size={18} />
-                  </button>
-                  <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${listIconBtn} hover:text-red-600`}>
-                    <Icon name="trash" size={18} />
-                  </button>
+                    <button type="button" onClick={() => setEditing(o)} aria-label={`Edit order ${o.id}`} title="Edit" className={listIconBtn}>
+                      <Icon name="edit" size={17} />
+                    </button>
+                    <button type="button" onClick={() => remove(o)} aria-label={`Delete order ${o.id}`} title="Delete" className={`${listIconBtn} hover:text-red-600`}>
+                      <Icon name="trash" size={17} />
+                    </button>
+                  </div>
                 </div>
               </li>
             );
           })}
         </ul>
       ) : (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         {pg.slice.map((o) => {
           const phone = phoneOf(o);
           const created = new Date(o.created_at).getTime();
@@ -316,32 +321,32 @@ export default function OwnerOrders() {
           const done = o.status === 'completed';
           const takeaway = isTakeaway(o.table_number);
           return (
-            <article key={o.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-edge bg-card shadow-card">
+            <article key={o.id} className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-edge bg-card shadow-card sm:rounded-2xl">
               {/* Header: table badge, order number + customer, status */}
-              <div className="flex items-center gap-3 bg-chip/50 px-4 py-3.5">
-                <div className="grid h-12 w-12 flex-none place-items-center rounded-xl bg-accent text-on-accent">
+              <div className="flex items-center gap-2.5 bg-chip/50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
+                <div className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-accent text-on-accent sm:h-12 sm:w-12 sm:rounded-xl">
                   <div className="text-center leading-none">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{takeaway ? 'Take' : 'Table'}</div>
-                    <div className={`mt-0.5 font-bold ${takeaway ? 'text-sm' : 'text-xl'}`}>{takeaway ? 'away' : o.table_number}</div>
+                    <div className="text-[8px] font-semibold uppercase tracking-wider opacity-80 sm:text-[9px]">{takeaway ? 'Take' : 'Table'}</div>
+                    <div className={`mt-0.5 font-bold ${takeaway ? 'text-xs sm:text-sm' : 'text-base sm:text-xl'}`}>{takeaway ? 'away' : o.table_number}</div>
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">Order #{o.id}</div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted">
+                  <div className="truncate text-[15px] font-semibold leading-tight sm:text-base">Order #{o.id}</div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted sm:text-sm">
                     <Icon name="user" size={13} />
                     <span className="truncate">{o.customer_name}</span>
                   </div>
                 </div>
                 <span
-                  className={`inline-flex flex-none items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}
+                  className={`inline-flex flex-none items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${done ? 'bg-okbg text-ok' : 'bg-warnbg text-warn'}`}
                 >
-                  <Icon name={done ? 'check' : 'clock'} size={13} />
+                  <Icon name={done ? 'check' : 'clock'} size={13} className="max-sm:hidden" />
                   {done ? 'Completed' : 'Received'}
                 </span>
               </div>
 
               {/* Times + phone */}
-              <div className="space-y-1.5 border-t border-line px-4 py-3 text-xs text-muted">
+              <div className="space-y-1 border-t border-line px-3 py-2 text-[11px] text-muted sm:space-y-1.5 sm:px-4 sm:py-3 sm:text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                   <span className="flex items-center gap-1.5">
                     <Icon name="clock" size={13} /> Placed{' '}
@@ -372,10 +377,10 @@ export default function OwnerOrders() {
               </div>
 
               {/* Items */}
-              <ul className="flex-1 space-y-2.5 border-t border-line px-4 py-3.5">
+              <ul className="flex-1 space-y-2 border-t border-line px-3 py-2.5 text-sm sm:space-y-2.5 sm:px-4 sm:py-3.5 sm:text-base">
                 {o.order_items.map((i) => (
                   <li key={i.id} className="flex items-start gap-2.5">
-                    <span className="mt-0.5 flex-none rounded-md bg-chip px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted">{i.quantity}×</span>
+                    <span className="mt-0.5 flex-none rounded-md bg-chip px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted sm:text-xs">{i.quantity}×</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex justify-between gap-3">
                         <span className="min-w-0 break-words font-medium">{i.item_name}</span>
@@ -386,14 +391,14 @@ export default function OwnerOrders() {
                     </div>
                   </li>
                 ))}
-                {o.note && <li className="rounded-lg bg-chip p-2 text-sm text-accent">Note: {o.note}</li>}
+                {o.note && <li className="rounded-lg bg-chip p-2 text-xs text-accent sm:text-sm">Note: {o.note}</li>}
               </ul>
 
               {/* Footer: total + actions */}
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-3 border-t border-line px-4 py-3.5">
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-2 border-t border-line px-3 py-2.5 sm:gap-y-3 sm:px-4 sm:py-3.5">
                 <div className="mr-auto min-w-0 pr-2">
-                  <div className="text-xl font-bold tabular-nums">{money(o.total)}</div>
-                  <div className={`text-xs font-semibold ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
+                  <div className="text-lg font-bold leading-tight tabular-nums sm:text-xl">{money(o.total)}</div>
+                  <div className={`text-[11px] font-semibold sm:text-xs ${isPaid(o) ? 'text-ok' : 'text-muted'}`}>{isPaid(o) ? 'Collected' : 'Not collected'}</div>
                 </div>
                 {/* One-way switch: Unpaid -> Paid. Once Paid it is locked (disabled), same size, so nothing shifts. */}
                 <button
@@ -401,7 +406,7 @@ export default function OwnerOrders() {
                   onClick={() => markPaid(o)}
                   disabled={isPaid(o)}
                   aria-label={isPaid(o) ? 'Paid' : 'Unpaid. Tap to mark as paid'}
-                  className={`${act} w-28 flex-none transition-colors ${
+                  className={`${act} w-28 flex-none whitespace-nowrap transition-colors ${
                     isPaid(o) ? 'cursor-default bg-okbg text-ok' : 'bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.98]'
                   }`}
                 >

@@ -10,7 +10,9 @@ export default function ThemeToggle({ tone = 'default' }) {
   const look =
     tone === 'hero'
       ? 'h-9 w-9 rounded-full bg-white/10 text-hero-ink backdrop-blur-sm transition hover:bg-white/20 active:scale-95'
-      : 'h-10 w-10 rounded-md bg-chip';
+      : tone === 'owner'
+        ? 'h-9 w-9 rounded-lg bg-chip sm:h-10 sm:w-10'
+        : 'h-10 w-10 rounded-md bg-chip';
   return (
     <button
       onClick={() => choose(dark ? 'light' : 'dark')}

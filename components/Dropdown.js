@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 const VARIANT = {
-  pill: 'inline-flex h-10 min-w-36 items-center justify-between gap-2 rounded-lg border border-edge bg-card px-4 text-sm font-semibold hover:bg-chip',
-  field: 'flex w-full items-center justify-between gap-2 rounded-xl border border-edge bg-card p-3 text-left hover:bg-chip',
+   pill: 'inline-flex h-9 min-w-0 items-center justify-between gap-1.5 rounded-lg border border-edge bg-card px-3 text-[13px] font-semibold hover:bg-chip sm:h-10 sm:min-w-36 sm:gap-2 sm:px-4 sm:text-sm',
+   field: 'flex w-full items-center justify-between gap-2 rounded-xl border border-edge bg-card px-3 py-2 text-left text-sm hover:bg-chip sm:p-3 sm:text-base',
 };
 
 function Chevron({ open }) {
@@ -153,7 +153,7 @@ export default function Dropdown({
                 role="option"
                 aria-selected={selected}
                 onClick={() => pick(o.value)}
-                className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium outline-none hover:bg-chip focus:bg-chip ${
+                className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium outline-none sm:py-2.5 hover:bg-chip focus:bg-chip ${
                   selected ? 'font-semibold text-accent' : ''
                 }`}
               >

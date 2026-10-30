@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { CONFIG, money } from '@/lib/config';
 import { uploadDishImage } from '@/lib/uploadImage';
 import { normalizeOptions } from '@/lib/options';
-import { isAddonCategory, goesWithIds } from '@/lib/addons';
 import OptionsEditor, { countGroups } from '@/components/OptionsEditor';
 import { useScrollLock } from '@/lib/useScrollLock';
 import { useDismiss } from '@/lib/useDismiss';
@@ -26,7 +25,6 @@ const EMPTY = {
   available: true,
   image_url: '',
   options: '',
-  goes_with: [],
 };
 
 function toForm(m) {
@@ -42,65 +40,10 @@ function toForm(m) {
     available: m.available !== false,
     image_url: m.image_url ?? '',
     options: m.options ? JSON.stringify(m.options, null, 2) : '',
-    goes_with: goesWithIds(m),
   };
 }
 
-// Add-ons only: tick the dishes this add-on is suggested with (empty = every dish).
-function GoesWithPicker({ dishes, value, onChange }) {
-  const [q, setQ] = useState('');
-  const chosen = new Set(value);
-  const byCat = {};
-  for (const d of dishes) {
-    if (q && !d.name.toLowerCase().includes(q.toLowerCase())) continue;
-    (byCat[d.category] ||= []).push(d);
-  }
-  const toggle = (id) => onChange(chosen.has(id) ? value.filter((x) => x !== id) : [...value, id]);
-  const toggleCat = (list) => {
-    const all = list.every((d) => chosen.has(d.id));
-    const ids = new Set(list.map((d) => d.id));
-    onChange(all ? value.filter((x) => !ids.has(x)) : [...new Set([...value, ...list.map((d) => d.id)])]);
-  };
-  return (
-    <div className="rounded-xl border border-edge bg-chip/40 p-4">
-      <div className="text-sm font-medium">Goes with (which dishes?)</div>
-      <p className="mt-1 text-xs text-muted">
-        Guests see this add-on on their “My orders” card when their order has one of these dishes. Leave all unticked to suggest it with every dish.
-      </p>
-      <p className="mt-2 text-xs font-semibold text-accent">
-        {value.length === 0 ? 'Suggested with: every dish' : `Suggested with ${value.length} dish${value.length === 1 ? '' : 'es'}`}
-      </p>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search dishes"
-        aria-label="Search dishes"
-        className="mt-3 w-full rounded-lg border border-edge bg-card px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent/40 md:text-sm"
-      />
-      <div className="mt-3 max-h-64 space-y-3 overflow-y-auto pr-1">
-        {Object.entries(byCat).map(([cat, list]) => (
-          <div key={cat}>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">{cat}</span>
-              <button type="button" onClick={() => toggleCat(list)} className="text-xs font-semibold text-accent">
-                {list.every((d) => chosen.has(d.id)) ? 'Clear' : 'Select all'}
-              </button>
-            </div>
-            {list.map((d) => (
-              <label key={d.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm hover:bg-chip">
-                <input type="checkbox" checked={chosen.has(d.id)} onChange={() => toggle(d.id)} className="h-4 w-4 flex-none accent-accent" />
-                <span className="min-w-0 truncate">{d.name}</span>
-              </label>
-            ))}
-          </div>
-        ))}
-        {Object.keys(byCat).length === 0 && <p className="text-sm text-muted">No dishes found.</p>}
-      </div>
-    </div>
-  );
-}
-
-function DishForm({ initial, categories, dishes, onCancel, onSaved, onDelete }) {
+function DishForm({ initial, categories, onCancel, onSaved, onDelete }) {
   const [f, setF] = useState(initial);
   // Click outside / Esc closes the editor (asks first if something was changed)
   const [startSnap] = useState(() => JSON.stringify(initial));
@@ -171,16 +114,11 @@ function DishForm({ initial, categories, dishes, onCancel, onSaved, onDelete }) 
       image_url: f.image_url || null,
       options,
     };
-    // Only add-ons carry a "goes with" list, so normal dishes still save even before the SQL has been run.
-    if (isAddonCategory(row.category)) row.goes_with = f.goes_with;
     const q = f.id
       ? supabase.from('menu_items').update(row).eq('id', f.id)
       : supabase.from('menu_items').insert(row);
     const { data, error: e } = await q.select();
     setBusy(false);
-    if (e && /goes_with/i.test(e.message || '')) {
-      return setError('Add-ons need one small database update first. Run supabase/addons-goes-with.sql in the Supabase SQL Editor, then save again.');
-    }
     if (e || !data || data.length === 0) {
       return setError('Could not save the dish. Make sure you are signed in as the owner.');
     }
@@ -349,14 +287,6 @@ function DishForm({ initial, categories, dishes, onCancel, onSaved, onDelete }) 
                     <Switch checked={f.is_veg} onChange={(v) => setF((p) => ({ ...p, is_veg: v }))} label="Vegetarian" />
                   </div>
                 </div>
-
-                {isAddonCategory(f.category) && (
-                  <GoesWithPicker
-                    dishes={dishes.filter((d) => !isAddonCategory(d.category) && d.id !== f.id)}
-                    value={f.goes_with}
-                    onChange={(ids) => setF((p) => ({ ...p, goes_with: ids }))}
-                  />
-                )}
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
@@ -772,7 +702,6 @@ export default function OwnerMenu() {
         <DishForm
           initial={form}
           categories={categories}
-          dishes={items}
           onCancel={() => setForm(null)}
           onSaved={() => {
             setForm(null);

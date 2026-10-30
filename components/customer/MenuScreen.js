@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { CONFIG, money } from '@/lib/config';
 import { normalizeOptions, optionsHint } from '@/lib/options';
-import { isAddon } from '@/lib/addons';
 import { VegMark, Ornament, Thumb, ChevronRight } from '@/components/customer/shared';
 
 const sectionId = (c) => `cat-${String(c).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
@@ -63,7 +62,7 @@ function DishCard({ m, qty, onAdd, onCustomize }) {
 
 export default function MenuScreen({
   table,
-  menu: fullMenu,
+  menu,
   loading,
   loadError,
   qtyByDish,
@@ -79,8 +78,6 @@ export default function MenuScreen({
   onStatus,
 }) {
   const [active, setActive] = useState('all');
-  // Add-ons (extra pav, butter...) are not shown here. Guests get them on the "My orders" screen, matched to their dish.
-  const menu = useMemo(() => fullMenu.filter((m) => !isAddon(m)), [fullMenu]);
 
   const sections = useMemo(() => {
     const order = [];

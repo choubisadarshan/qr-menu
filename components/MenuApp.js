@@ -236,37 +236,6 @@ export default function MenuApp() {
     go('status', true); // replaces the basket step, so Back returns to the menu
   }
 
-  // Add-ons ordered from the popup on an order card: a new small order for the same table
-  async function orderExtras(items, nameInput) {
-    const name = String(nameInput || '').trim();
-    if (!name) return 'Please enter your name so we can call it out.';
-    if (!sessionId) return 'Please wait a moment and try again.';
-    let res;
-    try {
-      res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session: sessionId,
-          table,
-          name,
-          phone: form.phone.trim(),
-          note: '',
-          items: items.map((i) => ({ id: i.id, qty: i.qty, options: {}, note: '' })),
-        }),
-      });
-    } catch {
-      return 'No connection. Please check your internet and try again.';
-    }
-    const result = await res.json().catch(() => ({}));
-    if (!res.ok) return result.error || 'Could not send your order. Please try again.';
-    setForm((f) => ({ ...f, name }));
-    await loadMine();
-    setTab('active');
-    showToast('Sent to the kitchen!', 'Your extras are on the way.');
-    return null;
-  }
-
   return (
     <>
       {view === 'menu' && (
@@ -307,18 +276,7 @@ export default function MenuApp() {
       )}
 
       {view === 'status' && (
-        <StatusScreen
-          table={table}
-          orders={myOrders}
-          ready={ordersReady}
-          justPlaced={justPlaced}
-          tab={tab}
-          setTab={setTab}
-          onBack={back}
-          menu={menu}
-          defaultName={form.name.trim()}
-          onOrderExtras={orderExtras}
-        />
+        <StatusScreen table={table} orders={myOrders} ready={ordersReady} justPlaced={justPlaced} tab={tab} setTab={setTab} onBack={back} />
       )}
 
       {customizing && (

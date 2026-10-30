@@ -1,16 +1,13 @@
 'use client';
-import { useState } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { CONFIG, money } from '@/lib/config';
 import { clock } from '@/lib/time';
 import { BackArrow, CheckIcon } from '@/components/customer/shared';
-import { addonsForOrder } from '@/lib/addons';
-import AddonSheet from '@/components/customer/AddonSheet';
 
 // Only two statuses are used: Received (the kitchen has it) and Completed.
 const LABEL = { received: 'Received', completed: 'Completed' };
 
-function OrderCard({ o, hint, onHint }) {
+function OrderCard({ o }) {
   const done = o.status === 'completed';
   const items = o.order_items || [];
   return (
@@ -49,24 +46,6 @@ function OrderCard({ o, hint, onHint }) {
       </ul>
       {o.note && <p className="mb-3 rounded-tile bg-chip p-2 text-sm text-muted">Note: {o.note}</p>}
 
-      {hint && (
-        <button
-          type="button"
-          onClick={() => onHint(o)}
-          className="mb-3 flex w-full items-center gap-3 rounded-tile border border-dashed border-accent/50 bg-accent/5 p-3 text-left transition active:scale-[0.99]"
-        >
-          <span className="flex-none select-none text-2xl" aria-hidden="true">{hint.addons[0].emoji || '🍽️'}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold">Want more with your {hint.dishName}?</span>
-            <span className="block truncate text-xs text-muted">
-              {hint.addons.slice(0, 3).map((a) => a.name).join(' · ')}
-              {hint.addons.length > 3 ? ` +${hint.addons.length - 3} more` : ''}
-            </span>
-          </span>
-          <span className="flex-none rounded-full bg-accent px-3 py-1 text-xs font-bold text-on-accent">+ Add</span>
-        </button>
-      )}
-
       <div className="flex items-center justify-between border-t border-line pt-3">
         <span className="font-sans text-lg font-bold tabular-nums">{money(o.total)}</span>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${o.payment_status === 'paid' ? 'bg-okbg text-ok' : 'bg-chip text-accent'}`}>
@@ -86,11 +65,7 @@ export default function StatusScreen({
   tab,
   setTab,
   onBack,
-  menu = [],
-  defaultName = '',
-  onOrderExtras,
 }) {
-  const [hintFor, setHintFor] = useState(null); // the order whose "add more" popup is open
   const active = orders.filter((o) => o.status !== 'completed');
   const completed = orders.filter((o) => o.status === 'completed');
   const unpaid = orders.filter((o) => o.payment_status !== 'paid');
@@ -174,7 +149,7 @@ export default function StatusScreen({
                   {tabNow === 'active' ? 'No orders waiting right now.' : 'No completed orders yet.'}
                 </p>
               ) : (
-                list.map((o) => <OrderCard key={o.id} o={o} hint={addonsForOrder(o, menu)} onHint={setHintFor} />)
+                list.map((o) => <OrderCard key={o.id} o={o} />)
               )}
             </div>
           </>
@@ -186,17 +161,6 @@ export default function StatusScreen({
           + Order more items
         </button>
       </div>
-
-      {hintFor && addonsForOrder(hintFor, menu) && (
-        <AddonSheet
-          key={hintFor.id}
-          dishName={addonsForOrder(hintFor, menu).dishName}
-          addons={addonsForOrder(hintFor, menu).addons}
-          defaultName={defaultName}
-          onClose={() => setHintFor(null)}
-          onOrder={onOrderExtras}
-        />
-      )}
     </div>
   );
 }

@@ -74,7 +74,10 @@ export default function OwnerOrders() {
       .from('menu_items')
       .select('*')
       .order('name')
-      .then(({ data }) => setMenu(data || []));
+      .then(({ data, error: e }) => {
+        if (e) console.error('Could not load the menu for the order form', e);
+        setMenu(data || []);
+      });
   }, []);
 
   useEffect(() => {
@@ -441,7 +444,7 @@ export default function OwnerOrders() {
         <OrderForm
           order={editing === 'new' ? null : editing}
           phone={editing === 'new' ? '' : phoneOf(editing)}
-          menu={menu.filter((m) => m.available)}
+          menu={menu.filter((m) => m.available !== false)}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);

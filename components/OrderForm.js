@@ -1,10 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDismiss } from '@/lib/useDismiss';
 import { supabase } from '@/lib/supabase';
 import { useScrollLock } from '@/lib/useScrollLock';
 import { CONFIG, money } from '@/lib/config';
-import Dropdown from '@/components/Dropdown';
 import { normalizeOptions } from '@/lib/options';
 
 export default function OrderForm({ order, phone = '', menu, onClose, onSaved }) {
@@ -24,6 +23,7 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   );
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
 
   // Click outside / Esc closes the form (asks first if something was typed)
   const [startSnap] = useState(() => JSON.stringify([table, name, ph, note, lines]));
@@ -37,6 +37,20 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
   const subtotal = lines.reduce((a, l) => a + l.price * l.quantity, 0);
   const tax = Math.round(subtotal * CONFIG.taxRate * 100) / 100;
   const total = subtotal + tax;
+
+  const pickable = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const groups = new Map();
+    for (const m of menu) {
+      if (normalizeOptions(m.options)) continue; // customizable dishes are ordered by guests
+      if (needle && !String(m.name).toLowerCase().includes(needle)) continue;
+      const cat = m.category || 'Other';
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat).push(m);
+    }
+    return [...groups.entries()];
+  }, [menu, q]);
+  const hiddenCustom = menu.filter((m) => normalizeOptions(m.options)).length;
 
   function addItem(id) {
     const m = menu.find((x) => String(x.id) === id);
@@ -142,17 +156,41 @@ export default function OrderForm({ order, phone = '', menu, onClose, onSaved })
           </div>
         ))}
 
-        <div className="mt-2">
-          <Dropdown
-            variant="field"
-            value=""
-            onChange={addItem}
-            options={menu
-              .filter((m) => !normalizeOptions(m.options)) // customizable dishes are ordered by guests
-              .map((m) => ({ value: String(m.id), label: `${m.name} · ${money(m.price)}` }))}
-            placeholder="+ Add a dish"
-            ariaLabel="Add a dish"
+        <div className="mt-3 rounded-xl border border-edge">
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search dishes to add"
+            aria-label="Search dishes to add"
+            className="w-full rounded-t-xl border-b border-edge bg-card p-3 text-base outline-none focus:border-accent md:text-sm"
           />
+          <div className="max-h-60 overflow-y-auto overscroll-contain">
+            {menu.length === 0 && <p className="p-3 text-sm text-muted">No dishes found. Add dishes in Menu first (and make sure they are switched on).</p>}
+            {menu.length > 0 && pickable.length === 0 && <p className="p-3 text-sm text-muted">{q ? 'No dish matches your search.' : 'No dishes can be added here.'}</p>}
+            {pickable.map(([cat, list]) => (
+              <div key={cat}>
+                <div className="sticky top-0 bg-chip px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted">{cat}</div>
+                {list.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => addItem(String(m.id))}
+                    className="flex w-full items-center justify-between gap-3 border-t border-edge px-3 py-2.5 text-left text-sm first:border-0 hover:bg-chip active:bg-chip"
+                  >
+                    <span className="min-w-0 truncate">{m.name}</span>
+                    <span className="flex flex-none items-center gap-2 tabular-nums text-muted">
+                      {money(m.price)}
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-accent text-base font-semibold leading-none text-on-accent" aria-hidden="true">+</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          {hiddenCustom > 0 && (
+            <p className="border-t border-edge px-3 py-2 text-xs text-muted">{hiddenCustom} customizable dish{hiddenCustom === 1 ? '' : 'es'} (pizza etc.) are ordered by guests from the menu.</p>
+          )}
         </div>
 
         <div className="mt-4 flex justify-between border-t border-edge pt-3 text-lg font-semibold">
